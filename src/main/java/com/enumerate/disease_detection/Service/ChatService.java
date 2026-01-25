@@ -191,8 +191,16 @@ public class ChatService {
         log.info("开始执行记忆对话");
 
         String sessionTitle = titleTool.summarizeConversationTopic(prompt);
+        // 1. 先定义要修改的字段和值（推荐用UpdateWrapper的set，避免实体空值问题）
+        UpdateWrapper<ChatSessionPO> updateWrapper = new UpdateWrapper<>();
+        // 条件：session_id = 拼接后的值（先拼接成变量，方便调试）
+        String targetSessionId = userId + String.valueOf(sessionId);
+        updateWrapper.eq("session_id", targetSessionId);
+        // 设置要修改的字段（直接在Wrapper中set，更稳妥）
+        updateWrapper.set("session_title", sessionTitle);
 
-        sessionMapper.update(ChatSessionPO.builder().sessionTitle(sessionTitle).build(),new UpdateWrapper<ChatSessionPO>().eq("session_id",userId + String.valueOf(sessionId)));
+        // 2. 执行更新（第一个参数传null，所有修改字段都在Wrapper中定义）
+        sessionMapper.update(null, updateWrapper);
 
 
         OpenAiStreamingChatModel model = mainModel.streamingModel();

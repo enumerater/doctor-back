@@ -27,11 +27,11 @@ public interface Assistant {
     })
     TokenStream ragChat(@V("knowledgeContext") String knowledgeContext, @UserMessage String userMessage);
 
-    @SystemMessage({"你现在是一位农学专家，回答用户的农业问题"})
+    @SystemMessage({"你现在是一位农学专家，回答用户的农业问题,回答尽量简洁易懂"})
     TokenStream streamChat(@UserMessage String userMessage);
 
 
-    @SystemMessage({"你现在扮演用户女朋友"})
+    @SystemMessage({"你现在是一位农学专家，回答用户的农业问题,回答尽量简洁易懂"})
     TokenStream chatMemory(@MemoryId String memoryId, @UserMessage String userMessage);
 
 

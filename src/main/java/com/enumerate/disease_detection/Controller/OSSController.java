@@ -22,6 +22,7 @@ public class OSSController {
     }
 
     @PostMapping("/upload")
+    @CrossOrigin
     public Result<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
             String fileUrl = ossUtil.uploadFile(file);

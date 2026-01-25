@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +23,7 @@ public class MainModel {
         return OpenAiChatModel.builder()
                 .apiKey(aiModelProperties.getTong().getApiKey())
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
-                .modelName(aiModelProperties.getTong().getModelName())
+                .modelName("qwen-flash")
                 .build();
     }
 
@@ -40,7 +41,9 @@ public class MainModel {
         return OpenAiStreamingChatModel.builder()
                 .apiKey(aiModelProperties.getTong().getApiKey())
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
-                .modelName(aiModelProperties.getTong().getModelName())
+//                .modelName("qwen-max")
+                .modelName("qwen-flash")
+                .timeout(Duration.ofSeconds(3))
                 .build();
     }
 
@@ -56,6 +59,17 @@ public class MainModel {
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
                 .modelName("qwen-plus")
                 .customParameters(modelCustomParams)
+                .build();
+    }
+
+    @Bean
+    public OpenAiChatModel visionModel() {
+        return OpenAiChatModel.builder()
+                .apiKey(aiModelProperties.getTong().getApiKey())
+                .baseUrl(aiModelProperties.getTong().getBaseUrl())
+                .modelName("qwen3-vl-plus") // 视觉模型名称，和Python中一致
+                .timeout(Duration.ofSeconds(60)) // 视觉模型响应较慢，延长超时时间
+                .maxRetries(1) // 重试次数
                 .build();
     }
 
