@@ -5,73 +5,64 @@ import lombok.Data;
 
 import java.util.List;
 
+
 /**
- * 视觉识别（病害检测）返回VO
- * 与前端可视化展示的数据结构完全对应
+ * 视觉识别结果VO（返回给前端的结构化数据）
  */
 @Data
 @Builder
 public class VisionVO {
-
     /**
-     * 病害名称（如：小麦条锈病、玉米大斑病）
+     * 病害名称（如：小麦白粉病）
      */
     private String diseaseName;
 
     /**
-     * 病害等级（固定值：轻度/中度/重度）
+     * 识别置信度（百分比，如：95）
      */
-    private String severityLevel;
+    private Integer confidence;
 
     /**
-     * 病害等级分数（固定值：1=轻度，2=中度，3=重度）
+     * 病害等级（轻微/中度/重度）
      */
-    private Integer severityScore;
+    private String severity;
 
     /**
-     * 病害等级描述（对当前病害严重程度的文字说明）
+     * 病害症状列表
      */
-    private String severityDesc;
+    private List<String> symptoms;
 
     /**
-     * 用药建议列表
+     * 防治方法
      */
-    private List<MedicationVO> medication;
+    private Prevention prevention;
 
     /**
-     * 防治措施列表（每条为一个具体措施）
+     * 注意事项列表
      */
-    private List<String> prevention;
+    private List<String> notes;
 
     /**
-     * 补充说明（Markdown格式的文本，可选）
-     */
-    private String supplementaryInfo;
-
-    /**
-     * 用药建议子VO
+     * 防治方法子VO
      */
     @Data
     @Builder
-    public static class MedicationVO {
+    public static class Prevention {
         /**
-         * 药品名称（如：三唑酮乳油（20%）、多菌灵可湿性粉剂（50%））
+         * 农业防治
          */
-        private String name;
+        private List<String> agricultural;
 
         /**
-         * 用药剂量（如：1000-1500倍液、800-1000倍液）
+         * 化学防治
          */
-        private String dosage;
+        private List<String> chemical;
 
         /**
-         * 使用方法（如：叶面喷雾，每公顷用药液750-900升，间隔7-10天喷一次）
+         * 生物防治
          */
-        private String usage;
-
-        /**
-         * 注意事项（如：避免高温时段喷施，与其他杀菌剂交替使用以防抗药性）
-         */
-        private String note;
+        private List<String> biological;
     }
+
+
 }
