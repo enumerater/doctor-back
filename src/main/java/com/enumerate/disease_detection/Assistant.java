@@ -35,4 +35,6 @@ public interface Assistant {
     TokenStream chatMemory(@MemoryId String memoryId, @UserMessage String userMessage);
 
 
+
+
 }

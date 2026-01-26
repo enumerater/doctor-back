@@ -1,6 +1,8 @@
 package com.enumerate.disease_detection.ChatModel;
 
+
 import com.enumerate.disease_detection.Properties.AiModelProperties;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
@@ -43,7 +45,7 @@ public class MainModel {
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
 //                .modelName("qwen-max")
                 .modelName("qwen-flash")
-                .timeout(Duration.ofSeconds(10))
+
                 .build();
     }
 
@@ -69,7 +71,24 @@ public class MainModel {
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
                 .modelName("qwen3-vl-plus") // 视觉模型名称，和Python中一致
                 .timeout(Duration.ofSeconds(60)) // 视觉模型响应较慢，延长超时时间
-                .maxRetries(1) // 重试次数
+                .maxRetries(2) // 重试次数
+                .build();
+    }
+
+
+    @Bean
+    public OpenAiChatModel qwen3VlStreamingModel() {
+
+
+        return OpenAiChatModel.builder()
+                // 阿里云通义千问 OpenAI 兼容接口地址
+                .baseUrl(aiModelProperties.getTong().getBaseUrl())
+                // 你的 DASHSCOPE API Key
+                .apiKey(aiModelProperties.getTong().getApiKey())
+                // 模型名称：直接写 qwen3-vl-plus（新版支持自定义模型名）
+                .modelName("qwen3-vl-plus")
+                // 超时时间（按需调整）
+                .timeout(Duration.ofMinutes(5))
                 .build();
     }
 
