@@ -43,7 +43,7 @@ public class MainModel {
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
 //                .modelName("qwen-max")
                 .modelName("qwen-flash")
-                .timeout(Duration.ofSeconds(3))
+                .timeout(Duration.ofSeconds(10))
                 .build();
     }
 
