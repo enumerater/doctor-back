@@ -1,7 +1,5 @@
 package com.enumerate.disease_detection.Controller;
 
-
-import com.enumerate.disease_detection.Assistant;
 import com.enumerate.disease_detection.ChatModel.MainModel;
 
 import com.enumerate.disease_detection.Common.Result;
@@ -12,8 +10,6 @@ import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.chat.response.ChatResponse;
-import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
