@@ -1,6 +1,5 @@
-package com.enumerate.disease_detection;
+package com.enumerate.disease_detection.ModelInterfaces;
 
-import com.enumerate.disease_detection.POJO.VO.VisionVO;
 import dev.langchain4j.service.*;
 
 public interface Assistant {

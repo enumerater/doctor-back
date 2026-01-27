@@ -2,7 +2,7 @@ package com.enumerate.disease_detection.Controller;
 
 
 import com.enumerate.disease_detection.Service.ChatService;
-import com.enumerate.disease_detection.Utils.Tools.TitleTool;
+import com.enumerate.disease_detection.Tools.TitleTool;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

@@ -1,4 +1,4 @@
-package com.enumerate.disease_detection.Utils.Tools;
+package com.enumerate.disease_detection.Tools;
 
 import com.enumerate.disease_detection.ChatModel.MainModel;
 import dev.langchain4j.agent.tool.Tool;

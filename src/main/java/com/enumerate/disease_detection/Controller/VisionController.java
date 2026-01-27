@@ -5,7 +5,7 @@ import com.enumerate.disease_detection.ChatModel.MainModel;
 import com.enumerate.disease_detection.Common.Result;
 import com.enumerate.disease_detection.POJO.VO.VisionVO;
 import com.enumerate.disease_detection.Properties.AiModelProperties;
-import com.enumerate.disease_detection.VisionAssisant;
+import com.enumerate.disease_detection.ModelInterfaces.VisionAssisant;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
