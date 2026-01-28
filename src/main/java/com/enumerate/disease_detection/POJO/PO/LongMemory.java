@@ -10,7 +10,7 @@ import java.io.Serializable;
 public class LongMemory implements Serializable {
     private Long id;
     // 用户唯一标识
-    private String userId;
+    private Long userId;
     // 作物品种（如番茄、小麦、水稻）
     private String cropType;
     // 种植地域（如华北、山东、南方大棚）

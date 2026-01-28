@@ -2,6 +2,7 @@ package com.enumerate.disease_detection.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.enumerate.disease_detection.Constant.*;
+import com.enumerate.disease_detection.Local.UserContextHolder;
 import com.enumerate.disease_detection.Mapper.UserMapper;
 import com.enumerate.disease_detection.POJO.DTO.UserDTO;
 import com.enumerate.disease_detection.POJO.DTO.UserSessionUpdateDTO;
@@ -47,6 +48,7 @@ public class UserService {
 
     public UserLoginVO login(UserDTO userDTO) {
         log.info("=== login service ===");
+
         String username = userDTO.getUsername();
         String password = userDTO.getPassword();
 
@@ -74,6 +76,9 @@ public class UserService {
             userLoginVO.setToken(token);
             userLoginVO.setMsg(UserLoginConstant.USER_SUCCESS);
             userLoginVO.setSessionId(String.valueOf(user.getSessionId()));
+
+            UserContextHolder.setUserId(user.getId());
+
             log.info("登录中");
             log.info("{}",userLoginVO);
 

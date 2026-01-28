@@ -4,8 +4,7 @@ import com.enumerate.disease_detection.ChatModel.MainModel;
 import com.enumerate.disease_detection.ChatModel.PersistentChatMemoryStore;
 import com.enumerate.disease_detection.Mapper.ChatMessageMapper;
 import com.enumerate.disease_detection.POJO.PO.ChatMessagePO;
-import com.enumerate.disease_detection.Tools.AddTool;
-import com.enumerate.disease_detection.Tools.MutiTool;
+import com.enumerate.disease_detection.Tools.*;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
@@ -36,14 +35,17 @@ public class AgentService {
     private ChatMessageMapper chatMessageMapper;
 
     @Autowired
-    private AddTool addTool;
+    private LongMemoryTool longMemoryTool;
 
     @Autowired
-    private MutiTool mutiTool;
+    private VisioTool visioTool;
+
+    @Autowired
+    private RagTool ragTool;
 
     @Async("aiAsyncExecutor")
     public void agent(SseEmitter emitter, String prompt, Long userId, Long sessionId) {
-        log.info("开始执行think-execute");
+        log.info("========================开始执行think-execute============================");
 
         OpenAiStreamingChatModel model = mainModel.streamingModel();
 
@@ -53,12 +55,12 @@ public class AgentService {
                 .chatMemoryProvider(memoryId -> {
                     // 每次调用都为当前memoryId构建专属的ChatMemory实例
                     return MessageWindowChatMemory.builder()
-                            .maxMessages(10)
+                            .maxMessages(20)
                             .chatMemoryStore(persistentChatMemoryStore)
                             .id(memoryId) // 把传入的memoryId绑定到ChatMemory实例上！！！
                             .build();
                 })
-                .tools(addTool, mutiTool)
+                .tools(longMemoryTool, visioTool,ragTool)
                 .build();
 
         AtomicInteger msgId = new AtomicInteger(1);
