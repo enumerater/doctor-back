@@ -3,6 +3,7 @@ package com.enumerate.disease_detection.Tools;
 import com.enumerate.disease_detection.ChatModel.MainModel;
 import com.enumerate.disease_detection.ModelInterfaces.VisionAssisant;
 import com.enumerate.disease_detection.POJO.VO.VisionVO;
+import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.ImageContent;
@@ -22,12 +23,12 @@ public class VisioTool {
     private MainModel mainModel;
 
     @Tool("视觉模型工具")
-    public String visionTool(String imageUrl, String cropType) {
+    public String visionTool(@P("imageUrl")  String imageUrl,@P("作物类型") String cropType) {
         log.info("工具调用: 视觉模型工具，参数: imageUrl={}, cropType={}", imageUrl, cropType);
         
         VisionAssisant openAiChatModel = AiServices.create(VisionAssisant.class,mainModel.visionModel());
 
-        String prompt = "理解图片，输出农业病害诊断结果，用户提供物种是" + cropType + "用户可能提供错误类型";
+        String prompt = "理解图片，输出农业病害诊断结果，用户提供物种是" + cropType;
 
         // 2. 构建包含图片+文本的UserMessage
         List<Content> contents = new ArrayList<>();

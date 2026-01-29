@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Map;
+import java.util.Objects;
 
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.OPTIONS;
@@ -42,8 +43,8 @@ public class AgentController {
 
     @GetMapping
     public void agent() {
-        String response = agentService.invokes(Map.of("request", "玉米锈病怎么治疗"));
-        log.info("request=============================================: {}", "玉米锈病怎么治疗");
+        String response = agentService.invokes("{“content”:“这是我的葡萄，叶子上有病害，怎么办”，“image”:“https://enumerate-oss.oss-cn-qingdao.aliyuncs.com/0a06cd2b-68f5-4ea8-9d00-ffa13b63a78a.png”}");
+        log.info("request=============================================agent正在处理");
         log.info("response: {}", response);
 
 

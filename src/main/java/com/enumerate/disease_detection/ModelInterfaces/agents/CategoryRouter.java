@@ -1,5 +1,6 @@
-package com.enumerate.disease_detection.ModelInterfaces;
+package com.enumerate.disease_detection.ModelInterfaces.agents;
 
+import com.enumerate.disease_detection.ModelInterfaces.RequestCategory;
 import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
