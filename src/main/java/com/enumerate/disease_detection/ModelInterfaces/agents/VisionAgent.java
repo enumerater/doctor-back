@@ -7,11 +7,11 @@ import dev.langchain4j.service.V;
 
 public interface VisionAgent {
 
-    @Agent("视觉分析代理，识别作物图像")
-    @SystemMessage("你是农业图像分析师，擅长识别作物病虫害、生长状态")
+    @Agent("视觉分析代理")
     @UserMessage("""
-        用户输入：{{analysisResult}}
-        调用图像识别工具，返回识别结果：
+        分析输入{{analysisResult}}
+        调用图像识别工具，返回识别结果
+        要求：仅返回作物类型、病害名称、病害特征、严重程度等关键信息，格式简洁
         """)
-    String analyzeImage(@V("analysisResult") String imageUrl);
+    String analyzeImage(@V("analysisResult") String analysisResult);
 }

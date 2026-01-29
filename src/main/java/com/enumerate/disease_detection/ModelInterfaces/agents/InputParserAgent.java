@@ -9,10 +9,10 @@ public interface InputParserAgent  {
         @Agent("解析用户文本")
         @UserMessage("""
         分析用户输入：{{request}}
-        1. 判断是否包含图片URL（以http/https开头）；
-        2. 判断用户输入有无作物类型；
-        3. 判断用户输入有无问题描述；
-        返回解析结果
+        1. 是否包含图片URL
+        2. 有无作物类型
+        3. 有无问题描述
+        返回简洁解析结果（仅包含图片URL、作物类型、问题描述）
         """)
         String parseInput(@V("request") String request);
 

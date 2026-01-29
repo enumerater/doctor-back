@@ -6,10 +6,12 @@ import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
 
 public interface SafeNoticeExpert {
-    @SystemMessage("你是安全注意Agent，针对指定作物病害输出简洁提醒：施药安全+禁忌事项+后续观察，控制3条内，无冗余内容。")
+    @Agent
+    @SystemMessage("你是安全注意专家，针对作物病害输出安全提醒")
     @UserMessage("""
         基于初步分析：{{analysisResult}}
+        输出：施药安全+禁忌事项+后续观察（控制3条内）
+        要求：简洁明了，无冗余内容，重点突出
         """)
-    @Agent
     String getSafetyAdvice(@V("analysisResult") String analysisResult);
 }

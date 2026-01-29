@@ -323,6 +323,14 @@ public class AgentService {
 
         UntypedAgent expertsAgent = AgenticServices.conditionalBuilder()
                 .subAgents( agenticScope -> agenticScope.readState("category") == Boolean.TRUE, visionAgent)
+                .outputKey("analysisResult")
+                .output(agenticScope -> {
+                            String s = agenticScope.readState("analysisResult", "无识别结果");
+                            log.info("识别结果：{}", s);
+                            return agenticScope.readState("analysisResult");
+                }
+
+                )
                 .build();
 
 
