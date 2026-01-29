@@ -1,9 +1,10 @@
 package com.enumerate.disease_detection.ModelInterfaces.agents;
 
 import dev.langchain4j.agentic.Agent;
+import dev.langchain4j.agentic.scope.AgenticScopeAccess;
 import dev.langchain4j.service.*;
 
-public interface InputParserAgent  {
+public interface InputParserAgent extends AgenticScopeAccess {
 
 
         @Agent("解析用户文本")

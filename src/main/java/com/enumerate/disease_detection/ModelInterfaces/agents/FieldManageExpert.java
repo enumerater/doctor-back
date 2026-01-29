@@ -1,11 +1,12 @@
 package com.enumerate.disease_detection.ModelInterfaces.agents;
 
 import dev.langchain4j.agentic.Agent;
+import dev.langchain4j.agentic.scope.AgenticScopeAccess;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
 
-public interface FieldManageExpert {
+public interface FieldManageExpert extends AgenticScopeAccess {
     @Agent
     @SystemMessage("你是田间管理专家，针对作物病害输出简洁方案")
     @UserMessage("""

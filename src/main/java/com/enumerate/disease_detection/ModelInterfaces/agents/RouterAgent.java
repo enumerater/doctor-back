@@ -1,11 +1,12 @@
 package com.enumerate.disease_detection.ModelInterfaces.agents;
 
 import dev.langchain4j.agentic.Agent;
+import dev.langchain4j.agentic.scope.AgenticScopeAccess;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
 
-public interface RouterAgent {
+public interface RouterAgent extends AgenticScopeAccess {
 
     @Agent
     @UserMessage("用户输入：{{analysisResult}}")

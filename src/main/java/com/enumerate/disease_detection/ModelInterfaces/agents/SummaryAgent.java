@@ -1,10 +1,11 @@
 package com.enumerate.disease_detection.ModelInterfaces.agents;
 
 import dev.langchain4j.agentic.Agent;
+import dev.langchain4j.agentic.scope.AgenticScopeAccess;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
 
-public interface SummaryAgent {
+public interface SummaryAgent extends AgenticScopeAccess {
     @Agent("总结输出代理")
     @UserMessage("""
         基于以下内容生成最终回复：

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
@@ -42,11 +43,35 @@ public class AgentController {
 //    }
 
     @GetMapping
-    public void agent() {
-        String response = agentService.invokes("{“content”:“这是我的葡萄，叶子上有病害，怎么办”，“image”:“https://enumerate-oss.oss-cn-qingdao.aliyuncs.com/0a06cd2b-68f5-4ea8-9d00-ffa13b63a78a.png”}");
+    public SseEmitter agent(HttpServletResponse response) throws IOException {
         log.info("request=============================================agent正在处理");
-        log.info("response: {}", response);
+        
+        // 设置SSE响应头
+        response.setContentType("text/event-stream;charset=UTF-8");
+        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("Connection", "keep-alive");
+        response.setHeader("X-Accel-Buffering", "no");
+        
+        // 创建SSE发射器，设置超时时间为5分钟
+        SseEmitter emitter = new SseEmitter(300 * 1000L);
+        
+        // 处理连接关闭
+        emitter.onCompletion(() -> {
+            log.info("SSE连接已完成");
+        });
+        
+        emitter.onTimeout(() -> {
+            log.info("SSE连接已超时");
+            emitter.complete();
+        });
+        
+        emitter.onError((e) -> {
+            log.error("SSE连接发生错误", e);
+            emitter.completeWithError(e);
+        });
 
+        agentService.invokes(emitter, "{\"content\":\"这是我的葡萄，叶子上有病害，怎么办\"，\"image\":\"\"}");
 
+        return emitter;
     }
 }
