@@ -1,7 +1,6 @@
 package com.enumerate.disease_detection.Service;
 
 import com.enumerate.disease_detection.ChatModel.MainModel;
-import com.enumerate.disease_detection.ChatModel.PersistentChatMemoryStore;
 import com.enumerate.disease_detection.ModelInterfaces.agents.*;
 import com.enumerate.disease_detection.Tools.*;
 import dev.langchain4j.agentic.AgenticServices;
@@ -33,9 +32,6 @@ public class AgentService {
     public void invokes(SseEmitter emitter, String input) throws IOException {
         OpenAiChatModel baseModel = mainModel.tongYiModel();
         AtomicInteger msgId = new AtomicInteger(1);
-        
-        // 发送初始状态
-        sendStatusUpdate(emitter, msgId.getAndIncrement(), "开始处理请求", "processing");
 
         //1 解析agent
         InputParserAgent inputParserAgent = AgenticServices
@@ -62,6 +58,24 @@ public class AgentService {
         UntypedAgent expertsAgent = AgenticServices.conditionalBuilder()
                 .subAgents(agenticScope -> agenticScope.readState("category") == Boolean.TRUE, visionAgent)
                 .outputKey("analysisResult")
+                .beforeCall(agenticScope -> {
+                    log.info("分支流 执行中{}", agenticScope);
+                    sendStatusUpdate(emitter, msgId.getAndIncrement(), "多模态分析", "processing");
+                })
+                .output(agenticScope -> {
+                    log.info("visionAgent 执行完毕{}", agenticScope);
+                    Boolean res1 = agenticScope.readState("category", false);
+                    if (res1){
+                        log.info("visionAgent 执行完毕{}", agenticScope);
+                        sendDataUpdate(emitter, msgId.getAndIncrement(), agenticScope.readState("analysisResult", "暂未生成有效识别结果"), "img_find");
+                    }
+                    else{
+                        log.info("visionAgent 未执行{}", agenticScope);
+                        sendDataUpdate(emitter, msgId.getAndIncrement(), "暂未发现多模态相关内容", "img_find");
+                    }
+
+                    return agenticScope.readState("analysisResult", "暂未生成有效识别结果");
+                })
                 .build();
 
         //4 safe notice agent
@@ -100,6 +114,10 @@ public class AgentService {
                         fieldManageExpert
                 )
                 .executor(Executors.newFixedThreadPool(3))
+                .beforeCall(agenticScope -> {
+                    log.info("并行流 执行中{}", agenticScope);
+                    sendStatusUpdate(emitter, msgId.getAndIncrement(), "正在生成方案", "processing");
+                })
                 .output(agenticScope -> {
                     log.info("plannerAgent 执行完毕{}", agenticScope);
                     
@@ -128,6 +146,10 @@ public class AgentService {
                 plannerAgent,      // 步骤4：并行生成方案 → 输出diseaseSolution
                 summaryAgent        // 步骤5：最终整合 → 输出finalResponse
         )
+        .beforeCall(agenticScope -> {
+            log.info("主流 执行中{}", agenticScope);
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "agent思考中", "processing");
+        })
         .outputKey("finalResponse")
         .output(agenticScope -> {
             // 保留日志需求：读取finalResponse并打印

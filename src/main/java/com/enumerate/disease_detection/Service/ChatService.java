@@ -186,11 +186,11 @@ public class ChatService {
     @Autowired
     private TitleTool titleTool;
 
-    @Async("aiAsyncExecutor")
-    public void memory(SseEmitter emitter, String prompt, Long userId, Long sessionId) {
+    @Async
+    public void memory(SseEmitter emitter, String prompt,String image ,Long userId, Long sessionId) {
         log.info("开始执行记忆对话");
 
-        String sessionTitle = titleTool.summarizeConversationTopic(prompt);
+        String sessionTitle = titleTool.summarizeConversationTopic(prompt + image);
         // 1. 先定义要修改的字段和值（推荐用UpdateWrapper的set，避免实体空值问题）
         UpdateWrapper<ChatSessionPO> updateWrapper = new UpdateWrapper<>();
         // 条件：session_id = 拼接后的值（先拼接成变量，方便调试）
