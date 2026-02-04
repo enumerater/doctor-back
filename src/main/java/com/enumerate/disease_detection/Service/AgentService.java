@@ -33,9 +33,6 @@ public class AgentService {
     public void invokes(SseEmitter emitter, String input) throws IOException {
         OpenAiChatModel baseModel = mainModel.tongYiModel();
         AtomicInteger msgId = new AtomicInteger(1);
-        
-        // 发送初始状态
-        sendStatusUpdate(emitter, msgId.getAndIncrement(), "开始处理请求", "processing");
 
         //1 解析agent
         InputParserAgent inputParserAgent = AgenticServices
@@ -55,13 +52,28 @@ public class AgentService {
         VisionAgent visionAgent = AgenticServices
                 .agentBuilder(VisionAgent.class)
                 .chatModel(baseModel)
-                .outputKey("analysisResult")
+                .outputKey("imgFind")
                 .tools(visioTool)
                 .build();
 
         UntypedAgent expertsAgent = AgenticServices.conditionalBuilder()
                 .subAgents(agenticScope -> agenticScope.readState("category") == Boolean.TRUE, visionAgent)
                 .outputKey("analysisResult")
+                .beforeCall(agenticScope -> {
+                    sendStatusUpdate(emitter, msgId.getAndIncrement(), "多模态分析中", "processing");
+                })
+                .output(agenticScope -> {
+                    sendStatusUpdate(emitter, msgId.getAndIncrement(), "多模态分析完成", "img_find");
+
+                    if (agenticScope.readState("category") == Boolean.TRUE) {
+                        sendDataUpdate(emitter, msgId.getAndIncrement(), (String) agenticScope.readState("imgFind"), "img_find");
+                    }
+                    else {
+                        sendDataUpdate(emitter, msgId.getAndIncrement(), "未发现多模态内容，调用文本模型", "img_find");
+                    }
+
+                    return agenticScope.readState("analysisResult");
+                })
                 .build();
 
         //4 safe notice agent
@@ -100,6 +112,9 @@ public class AgentService {
                         fieldManageExpert
                 )
                 .executor(Executors.newFixedThreadPool(3))
+                .beforeCall(agenticScope -> {
+                    sendStatusUpdate(emitter, msgId.getAndIncrement(), "正在生成方案", "processing");
+                })
                 .output(agenticScope -> {
                     log.info("plannerAgent 执行完毕{}", agenticScope);
                     
@@ -113,6 +128,8 @@ public class AgentService {
                     sendDataUpdate(emitter, msgId.getAndIncrement(), res1, "safe_notice");
                     sendDataUpdate(emitter, msgId.getAndIncrement(), res2, "pesticide");
                     sendDataUpdate(emitter, msgId.getAndIncrement(), res3, "field_manage");
+
+                    sendStatusUpdate(emitter, msgId.getAndIncrement(), "正在汇总内容", "processing");
                     
                     return String.format("安全注意：%s\n植保用药：%s\n田间管理：%s", res1, res2, res3);
                 })
@@ -129,6 +146,9 @@ public class AgentService {
                 summaryAgent        // 步骤5：最终整合 → 输出finalResponse
         )
         .outputKey("finalResponse")
+        .beforeCall(agenticScope -> {
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "正在思考中", "default");
+        })
         .output(agenticScope -> {
             // 保留日志需求：读取finalResponse并打印
             String finalResult = agenticScope.readState("finalResponse", "暂未生成有效内容");

@@ -13,6 +13,7 @@ public interface SummaryAgent extends AgenticScopeAccess {
         要求：
         1. 结构清晰，分点明确
         2. 语言专业友好，易于理解
+        3. 简洁明了，避免冗余信息
         """)
     String generateSummary(
             @V("diseaseSolution") String finalResponse

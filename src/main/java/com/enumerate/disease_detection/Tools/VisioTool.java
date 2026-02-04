@@ -28,7 +28,7 @@ public class VisioTool {
         
         VisionAssisant openAiChatModel = AiServices.create(VisionAssisant.class,mainModel.visionModel());
 
-        String prompt = "理解图片，输出农业病害诊断结果，用户提供物种是" + cropType;
+        String prompt = "简洁回答！！！理解图片，输出农业病害诊断结果，用户提供物种是" + cropType;
 
         // 2. 构建包含图片+文本的UserMessage
         List<Content> contents = new ArrayList<>();

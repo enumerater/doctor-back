@@ -8,7 +8,7 @@ import dev.langchain4j.service.V;
 
 public interface PesticideExpert extends AgenticScopeAccess {
     @Agent
-    @SystemMessage("你是植保用药专家，针对作物病害输出专业用药方案")
+    @SystemMessage("你是植保用药专家，针对作物病害输出专业用药简洁方案")
     @UserMessage("""
         基于初步分析：{{analysisResult}}
         输出：推荐药剂+使用方法+使用剂量
