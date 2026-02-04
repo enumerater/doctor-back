@@ -1,5 +1,6 @@
 package com.enumerate.disease_detection.ModelInterfaces;
 
+import com.enumerate.disease_detection.POJO.VO.MergeTemHum;
 import dev.langchain4j.service.*;
 
 public interface Assistant {
@@ -35,6 +36,8 @@ public interface Assistant {
 
     @SystemMessage({"你现在是一位农学专家，回答用户的农业问题,回答尽量简洁易懂"})
     TokenStream chatMemory(@MemoryId String memoryId, @UserMessage String userMessage);
+
+
 
 
 

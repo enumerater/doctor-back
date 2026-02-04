@@ -4,11 +4,13 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
 
+@Slf4j
 public class JwtUtil {
     /**
      * 生成jwt
@@ -47,12 +49,30 @@ public class JwtUtil {
      * @return
      */
     public static Claims parseJWT(String secretKey, String token) {
-        // 得到DefaultJwtParser
+        // ========== 核心验证日志：打印工具类实际接收到的token ==========
+        log.error("JwtUtil接收到的token：【{}】，token是否为null：【{}】", token, token == null);
+        // ========== 原有防御性校验 ==========
+        if (token == null) {
+            throw new IllegalArgumentException("JWT Token不能为null");
+        }
+        String cleanToken = token.trim();
+        if (cleanToken.isEmpty()) {
+            throw new IllegalArgumentException("JWT Token不能为空串或纯空白字符");
+        }
+        // 兼容Bearer前缀
+        if (cleanToken.startsWith("Bearer ")) {
+            cleanToken = cleanToken.substring(7).trim();
+            log.info("JwtUtil处理Bearer前缀，截取后token：【{}】", cleanToken);
+            if (cleanToken.isEmpty()) {
+                throw new IllegalArgumentException("JWT Token仅包含Bearer前缀，无实际令牌内容");
+            }
+        }
+        // 解析逻辑
         Claims claims = Jwts.parser()
-                // 设置签名的秘钥
                 .setSigningKey(secretKey.getBytes(StandardCharsets.UTF_8))
-                // 设置需要解析的jwt
-                .parseClaimsJws(token).getBody();
+                .parseClaimsJws(cleanToken)
+                .getBody();
+        log.info("JwtUtil解析Token成功，获取到Claims：【{}】", claims);
         return claims;
     }
 

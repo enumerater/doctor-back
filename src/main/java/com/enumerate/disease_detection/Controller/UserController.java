@@ -6,6 +6,7 @@ import com.enumerate.disease_detection.POJO.DTO.UserSessionUpdateDTO;
 import com.enumerate.disease_detection.POJO.PO.UserPO;
 import com.enumerate.disease_detection.POJO.VO.UserLoginVO;
 import com.enumerate.disease_detection.Service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -34,9 +35,12 @@ public class UserController {
      */
     @GetMapping("/login")
     @CrossOrigin
-    public Result<UserLoginVO> login(UserDTO userDTO) {
+    public Result<UserLoginVO> login(HttpServletRequest request, UserDTO userDTO) {
         log.info("=== login controller ===");
         log.info(userDTO.toString());
+        String userIp = request.getRemoteAddr();
+        log.info(userIp);
+
         UserLoginVO res = userService.login(userDTO);
         return Result.success(res);
     }

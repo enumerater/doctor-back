@@ -18,8 +18,7 @@ public class GlobalExceptionHandler {
     public Result<String> handleAiModelException(Exception e) {
         String errorMsg = "AI模型服务暂时不可用：";
         // 识别额度耗尽的错误信息
-        if (e.getMessage().contains("AllocationQuota.FreeTierOnly") ||
-                e.getMessage().contains("free tier of the model has been exhausted")) {
+        if (e.getMessage().contains("Connection reset")) {
             errorMsg += "模型免费额度已用尽，请联系管理员充值或切换模型";
         } else {
             errorMsg += e.getMessage();

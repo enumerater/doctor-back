@@ -79,6 +79,7 @@ public class UserService {
 
             UserContextHolder.setUserId(user.getId());
 
+
             log.info("登录中");
             log.info("{}",userLoginVO);
 
