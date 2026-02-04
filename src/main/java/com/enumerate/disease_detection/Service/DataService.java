@@ -25,7 +25,7 @@ public class DataService {
     // 百度千帆接口地址
     private static final String QIANFAN_URL = "https://qianfan.baidubce.com/v2/ai_search/web_search";
     // 接口授权Token（替换为你的有效Token）
-    private static final String AUTHORIZATION = "Bearer bce-v3/ALTAK-opLNWvk7s9CUJC8mPsNIE/2bc5d81f13ae900c1bd22273cd09ad1e9e0371de";
+    private static final String AUTHORIZATION = System.getenv("QIANFAN_AUTHORIZATION");
 
     public String getData(List<Map<String, String>> prompt) throws IOException, URISyntaxException, InterruptedException {
         log.info("request=============================================data正在处理");
