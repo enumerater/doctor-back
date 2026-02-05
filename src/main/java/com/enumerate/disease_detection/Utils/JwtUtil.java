@@ -50,7 +50,7 @@ public class JwtUtil {
      */
     public static Claims parseJWT(String secretKey, String token) {
         // ========== 核心验证日志：打印工具类实际接收到的token ==========
-        log.error("JwtUtil接收到的token：【{}】，token是否为null：【{}】", token, token == null);
+        log.info("JwtUtil接收到的token：【{}】，token是否为null：【{}】", token, token == null);
         // ========== 原有防御性校验 ==========
         if (token == null) {
             throw new IllegalArgumentException("JWT Token不能为null");

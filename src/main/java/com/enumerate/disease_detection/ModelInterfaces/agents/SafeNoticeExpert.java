@@ -10,8 +10,8 @@ public interface SafeNoticeExpert extends AgenticScopeAccess {
     @Agent
     @SystemMessage("你是安全注意专家，针对作物病害输出简洁安全提醒")
     @UserMessage("""
-        基于初步分析：{{analysisResult}}
+        基于初步分析：{{visionResult}}
         输出：施药安全+禁忌事项+后续观察
         """)
-    String getSafetyAdvice(@V("analysisResult") String analysisResult);
+    String getSafetyAdvice(@V("visionResult") String analysisResult);
 }

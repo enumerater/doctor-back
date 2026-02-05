@@ -1,7 +1,7 @@
 package com.enumerate.disease_detection.Service;
 
 import com.enumerate.disease_detection.ChatModel.MainModel;
-import com.enumerate.disease_detection.ChatModel.PersistentChatMemoryStore;
+import com.enumerate.disease_detection.ModelInterfaces.agents.VisionAgent;
 import com.enumerate.disease_detection.ModelInterfaces.agents.*;
 import com.enumerate.disease_detection.Tools.*;
 import dev.langchain4j.agentic.AgenticServices;
@@ -38,7 +38,7 @@ public class AgentService {
         InputParserAgent inputParserAgent = AgenticServices
                 .agentBuilder(InputParserAgent.class)
                 .chatModel(baseModel)
-                .outputKey("analysisResult")
+                .outputKey("parsedInput")
                 .build();
 
         // 分支
@@ -52,28 +52,8 @@ public class AgentService {
         VisionAgent visionAgent = AgenticServices
                 .agentBuilder(VisionAgent.class)
                 .chatModel(baseModel)
-                .outputKey("imgFind")
+                .outputKey("visionResult")
                 .tools(visioTool)
-                .build();
-
-        UntypedAgent expertsAgent = AgenticServices.conditionalBuilder()
-                .subAgents(agenticScope -> agenticScope.readState("category") == Boolean.TRUE, visionAgent)
-                .outputKey("analysisResult")
-                .beforeCall(agenticScope -> {
-                    sendStatusUpdate(emitter, msgId.getAndIncrement(), "多模态分析中", "processing");
-                })
-                .output(agenticScope -> {
-                    sendStatusUpdate(emitter, msgId.getAndIncrement(), "多模态分析完成", "img_find");
-
-                    if (agenticScope.readState("category") == Boolean.TRUE) {
-                        sendDataUpdate(emitter, msgId.getAndIncrement(), (String) agenticScope.readState("imgFind"), "img_find");
-                    }
-                    else {
-                        sendDataUpdate(emitter, msgId.getAndIncrement(), "未发现多模态内容，调用文本模型", "img_find");
-                    }
-
-                    return agenticScope.readState("analysisResult");
-                })
                 .build();
 
         //4 safe notice agent
@@ -104,8 +84,32 @@ public class AgentService {
                 .outputKey("finalResponse")
                 .build();
 
-        PlannerAgent plannerAgent = AgenticServices
-                .parallelBuilder(PlannerAgent.class)
+        UntypedAgent expertsAgent = AgenticServices.conditionalBuilder()
+                .subAgents(agenticScope -> agenticScope.readState("category") == Boolean.TRUE, visionAgent)
+                .beforeCall(agenticScope -> {
+                    sendStatusUpdate(emitter, msgId.getAndIncrement(), "多模态分析中", "processing");
+                })
+                .output(agenticScope -> {
+                    sendStatusUpdate(emitter, msgId.getAndIncrement(), "多模态分析完成", "img_find");
+                    String visionResultValue = ""; // 定义兜底值变量
+                    if (agenticScope.readState("category") == Boolean.TRUE) {
+                        visionResultValue = (String) agenticScope.readState("visionResult");
+                        log.info("visionResultValue: {}", visionResultValue);
+                        sendDataUpdate(emitter, msgId.getAndIncrement(), visionResultValue, "img_find");
+                    } else {
+                        // 无图场景：兜底值用【输入解析结果parsedInput】（贴合业务，专家基于文本分析）
+                        visionResultValue = (String) agenticScope.readState("parsedInput", "用户文本：" + input);
+                        sendDataUpdate(emitter, msgId.getAndIncrement(), "未发现多模态内容，调用文本模型", "img_find");
+                    }
+                    // 关键修复：无论是否有图，都显式往容器中写入visionResult，保证键存在
+                    agenticScope.writeState("visionResult", visionResultValue);
+                    return visionResultValue;
+                })
+                .outputKey("visionResult")
+                .build();
+
+        UntypedAgent plannerAgent = AgenticServices
+                .parallelBuilder()
                 .subAgents(
                         safeNoticeExpert,
                         pesticideExpert,
@@ -117,20 +121,20 @@ public class AgentService {
                 })
                 .output(agenticScope -> {
                     log.info("plannerAgent 执行完毕{}", agenticScope);
-                    
+
                     String res1 = agenticScope.readState("safeNotice", "暂未生成有效注意事项");
                     String res2 = agenticScope.readState("pesticide", "暂未生成有效用药方案");
                     String res3 = agenticScope.readState("fieldManage", "暂未生成有效管理方案");
-                    
+
                     sendStatusUpdate(emitter, msgId.getAndIncrement(), "方案生成完成", "processing");
-                    
+
                     // 流式发送方案结果
                     sendDataUpdate(emitter, msgId.getAndIncrement(), res1, "safe_notice");
                     sendDataUpdate(emitter, msgId.getAndIncrement(), res2, "pesticide");
                     sendDataUpdate(emitter, msgId.getAndIncrement(), res3, "field_manage");
 
                     sendStatusUpdate(emitter, msgId.getAndIncrement(), "正在汇总内容", "processing");
-                    
+
                     return String.format("安全注意：%s\n植保用药：%s\n田间管理：%s", res1, res2, res3);
                 })
                 .outputKey("diseaseSolution")
@@ -145,28 +149,27 @@ public class AgentService {
                 plannerAgent,      // 步骤4：并行生成方案 → 输出diseaseSolution
                 summaryAgent        // 步骤5：最终整合 → 输出finalResponse
         )
-        .outputKey("finalResponse")
         .beforeCall(agenticScope -> {
-            sendStatusUpdate(emitter, msgId.getAndIncrement(), "正在思考中", "default");
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "正在思考中", "processing");
         })
         .output(agenticScope -> {
             // 保留日志需求：读取finalResponse并打印
             String finalResult = agenticScope.readState("finalResponse", "暂未生成有效内容");
             log.info("novelCreator 执行完毕，最终结果：{}", finalResult);
-            
+
             sendStatusUpdate(emitter, msgId.getAndIncrement(), "处理完成", "completed");
             // 发送最终结果
             sendDataUpdate(emitter, msgId.getAndIncrement(), finalResult, "final_result");
-            
+
             emitter.complete();
             return finalResult;
         })
         .build();
-        
+
         // 执行agent调用链
         novelCreator.invoke(Map.of("request", input));
     }
-    
+
     /**
      * 发送状态更新
      */
@@ -186,7 +189,7 @@ public class AgentService {
             emitter.completeWithError(e);
         }
     }
-    
+
     /**
      * 发送数据更新
      */

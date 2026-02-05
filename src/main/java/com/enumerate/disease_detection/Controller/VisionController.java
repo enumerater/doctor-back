@@ -1,11 +1,17 @@
 package com.enumerate.disease_detection.Controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.enumerate.disease_detection.ChatModel.MainModel;
 
 import com.enumerate.disease_detection.Common.Result;
+import com.enumerate.disease_detection.Mapper.PicMapper;
+import com.enumerate.disease_detection.POJO.DTO.PicDTO;
+import com.enumerate.disease_detection.POJO.VO.CropDiseaseAnalysisVO;
+import com.enumerate.disease_detection.POJO.VO.PicVO;
 import com.enumerate.disease_detection.POJO.VO.VisionVO;
 import com.enumerate.disease_detection.Properties.AiModelProperties;
 import com.enumerate.disease_detection.ModelInterfaces.VisionAssisant;
+import com.enumerate.disease_detection.Utils.FastApiClientUtil;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
@@ -62,44 +68,52 @@ public class VisionController {
     @GetMapping
     @CrossOrigin
     public Result<VisionVO> vision(@RequestParam(value = "url", required = false) String url,
-                                   @RequestParam(value = "cropType", required = false) String cropType) {
+                                   @RequestParam(value = "cropType", required = false) String cropType) throws Exception {
 
-        VisionAssisant openAiChatModel = AiServices.create(VisionAssisant.class,mainModel.visionModel());
+        String prompt = "理解图片，输出农业病害诊断结果";
 
-        String prompt = "理解图片，输出农业病害诊断结果，用户提供物种是" + cropType + "用户可能提供错误类型" +
-            "严格匹配 Java 实体 VisionVO 结构：\n" +
-            "- diseaseName（字符串）：病害名称\n" +
-            "- confidence（0-100整数）：识别置信度\n" +
-            "- severity（仅轻微/中度/重度）：病害等级\n" +
-            "- symptoms（字符串列表）：病害症状\n" +
-            "- prevention（嵌套结构）：\n" +
-            "  - agricultural（字符串列表）：农业防治\n" +
-            "  - chemical（字符串列表）：化学防治\n" +
-            "  - biological（字符串列表）：生物防治\n" +
-            "- notes（字符串列表）：注意事项\n" +
-            "\n" +
-            "仅输出上述字段的内容，按字段名分条列出，列表项用数字序号开头，无多余文字。";
+        CropDiseaseAnalysisVO cropDiseaseAnalysisVO = FastApiClientUtil.callCropDiseaseApi(url, prompt);
+        String result = cropDiseaseAnalysisVO.getAnswerContent();
+        String thinking = cropDiseaseAnalysisVO.getThinkingContent();
+        log.info("python思考结果: 视觉模型工具，思考过程: {}", thinking);
+        log.info("python思考结果: 视觉模型工具，结果: {}", result);
 
-        // 2. 构建包含图片+文本的UserMessage
-        List<Content> contents = new ArrayList<>();
-        // 添加图片内容（URL形式）
-        contents.add(ImageContent.from(url));
-        // 添加文本问题
-        contents.add(TextContent.from(prompt));
-        // 构建UserMessage（无name，仅包含多模态内容）
-        UserMessage userMessage = new UserMessage(contents);
+        // 4. 创建AI服务并调用（与纯文本调用一致，框架自动处理多模态）
+        VisionAssisant visionAssisant = AiServices.create(VisionAssisant.class, mainModel.visionModel());
+        VisionVO res = visionAssisant.visionChat("think " + thinking + "\n" + "result " + result);
 
-        VisionVO res = openAiChatModel.visionChat(userMessage);
-
-
-
-        log.info("================{}",res);
-
-
+        log.info("视觉模型返回结果：{}", res);
 
         return Result.success(res);
     }
 
+
+    @Autowired
+    private PicMapper picMapper;
+
+    @GetMapping("/getPic")
+    @CrossOrigin
+    public Result<PicVO> getPic(@RequestParam(value = "picCode", required = false) String urlCode) {
+        PicDTO picDTO = picMapper.selectOne(new QueryWrapper<PicDTO>().eq("pic_code", urlCode));
+        if (picDTO == null) {
+            return Result.success(null);
+        }
+        PicVO picVO = new PicVO();
+        picVO.setUrl(picDTO.getPicUrl());
+
+        return Result.success(picVO);
+    }
+
+    @GetMapping("/savePic")
+    @CrossOrigin
+    public Result<String> setPic(@RequestParam(value = "picCode", required = false) String urlCode,
+                                 @RequestParam(value = "picUrl", required = false) String picUrl) {
+        PicDTO picDTO = new PicDTO();
+        picDTO.setPicCode(urlCode);
+        picDTO.setPicUrl(picUrl);
+        picMapper.insert(picDTO);
+        return Result.success(urlCode);
+    }
 
 
 }

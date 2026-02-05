@@ -2,7 +2,6 @@ package com.enumerate.disease_detection.ChatModel;
 
 
 import com.enumerate.disease_detection.Properties.AiModelProperties;
-import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
@@ -10,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -71,7 +71,8 @@ public class MainModel {
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
                 .modelName("qwen3-vl-plus") // 视觉模型名称，和Python中一致
                 .timeout(Duration.ofSeconds(60)) // 视觉模型响应较慢，延长超时时间
-                .maxRetries(2) // 重试次数
+                .maxRetries(3) // 重试次数
+                .temperature(0.2) // 核心修改：0.2-0.3是平衡稳定与判断灵活性的黄金值
                 .build();
     }
 

@@ -10,8 +10,8 @@ public interface FieldManageExpert extends AgenticScopeAccess {
     @Agent
     @SystemMessage("你是田间管理专家，针对作物病害输出简洁方案")
     @UserMessage("""
-        基于初步分析：{{analysisResult}}
+        基于初步分析：{{visionResult}}
         输出：浇水建议+环境调控+栽培管理
         """)
-    String getFieldAdvice(@V("analysisResult") String analysisResult);
+    String getFieldAdvice(@V("visionResult") String analysisResult);
 }

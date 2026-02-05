@@ -10,8 +10,8 @@ public interface PesticideExpert extends AgenticScopeAccess {
     @Agent
     @SystemMessage("你是植保用药专家，针对作物病害输出专业用药简洁方案")
     @UserMessage("""
-        基于初步分析：{{analysisResult}}
+        基于初步分析：{{visionResult}}
         输出：推荐药剂+使用方法+使用剂量
         """)
-    String getPesticideAdvice(@V("analysisResult") String analysisResult);
+    String getPesticideAdvice(@V("visionResult") String analysisResult);
 }
