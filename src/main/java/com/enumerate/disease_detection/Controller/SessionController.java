@@ -50,6 +50,7 @@ public class SessionController {
             sessionVO.setLastChatTime(chatSessionPO.getLastChatTime().toString());
             sessionVO.setSessionStatus(chatSessionPO.getSessionStatus());
             sessionVO.setSessionId(chatSessionPO.getSessionId());
+            sessionVO.setSessionType(chatSessionPO.getSessionType());
             sessionVOList.add(sessionVO);
         }
 

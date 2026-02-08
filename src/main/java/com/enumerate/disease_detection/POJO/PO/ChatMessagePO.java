@@ -42,4 +42,6 @@ public class ChatMessagePO {
      * 软删除：0 = 未删除，1 = 已删除，非空、默认 0、索引
      */
     private String deleted;
+
+    private String agentData;
 }

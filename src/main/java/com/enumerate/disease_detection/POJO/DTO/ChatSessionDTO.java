@@ -7,4 +7,6 @@ public class ChatSessionDTO {
     private Long userId;
     private String sessionTitle;
     private String sessionId;
+    private String sessionType;
+
 }

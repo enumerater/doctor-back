@@ -9,5 +9,6 @@ public class SessionVO {
     private String lastChatTime;
     private String sessionStatus;
     private String sessionId;
+    private String sessionType;
 
 }

@@ -58,4 +58,6 @@ public class ChatSessionPO {
     private String deleted;
 
     private String sessionId;
+
+    private String sessionType;
 }
