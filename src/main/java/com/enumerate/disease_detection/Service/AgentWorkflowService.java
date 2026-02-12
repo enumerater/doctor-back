@@ -20,21 +20,21 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * ReAct循环服务 - 企业级Agent工作流
+ * Agent工作流服务 - 基于ReAct认知循环的统一工作流
  *
- * 核心特性：
- * 1. ReAct循环：计划(Plan) → 执行(Act) → 观察(Observe) → 反思(Reflect) → 决策(Decide)
- * 2. 动态规划：根据任务复杂度生成执行计划
- * 3. 质量评估：置信度打分、自动重试
- * 4. 异常处理：优雅降级、备用方案
- * 5. 工作记忆：保存执行状态和中间结果
+ * <p>采用 ReAct (Reasoning + Acting) 架构，将推理与行动交替进行，
+ * 实现动态规划、质量评估和自适应决策。</p>
  *
- * @author Enterprise Agent Team
- * @version 2.0 (ReAct Loop)
+ * <p>工作流程：用户输入 -> 加载Skills -> 规划(Plan) -> [执行(Act) -> 观察(Observe)
+ * -> 反思(Reflect) -> 决策(Decide)] x N -> 综合报告</p>
+ *
+ * <p>参考文献：Yao et al., "ReAct: Synergizing Reasoning and Acting in Language Models", ICLR 2023</p>
+ *
+ * @see <a href="https://arxiv.org/abs/2210.03629">ReAct论文</a>
  */
 @Service
 @Slf4j
-public class ReActLoopService {
+public class AgentWorkflowService {
 
     @Autowired
     private MainModel mainModel;
@@ -49,9 +49,6 @@ public class ReActLoopService {
 
     /**
      * 清理JSON字符串，移除markdown代码块标记
-     *
-     * @param jsonString 可能包含markdown标记的JSON字符串
-     * @return 纯净的JSON字符串
      */
     private String cleanJsonString(String jsonString) {
         if (jsonString == null || jsonString.isEmpty()) {
@@ -60,15 +57,11 @@ public class ReActLoopService {
 
         String cleaned = jsonString.trim();
 
-        // 移除markdown代码块标记
-        // 匹配 ```json...``` 或 ```...```
         if (cleaned.startsWith("```")) {
-            // 找到第一个换行符
             int firstNewline = cleaned.indexOf('\n');
             if (firstNewline > 0) {
                 cleaned = cleaned.substring(firstNewline + 1);
             } else {
-                // 如果没有换行符，尝试移除```json或```
                 cleaned = cleaned.replaceFirst("^```(json)?\\s*", "");
             }
         }
@@ -78,7 +71,6 @@ public class ReActLoopService {
             cleaned = cleaned.substring(0, lastBackticks);
         }
 
-        // 移除可能的前后空白
         cleaned = cleaned.trim();
 
         log.debug("JSON清理前: {}", jsonString.substring(0, Math.min(100, jsonString.length())));
@@ -88,19 +80,18 @@ public class ReActLoopService {
     }
 
     /**
-     * 执行ReAct循环
+     * 执行Agent工作流
      *
-     * @param emitter SSE发送器
-     * @param input 用户输入
+     * @param emitter SSE事件发射器
+     * @param input 用户输入（文本+图片URL）
      * @param userId 用户ID
-     * @param agentConfigId Agent配置ID（可为null，将使用默认配置）
+     * @param agentConfigId Agent配置ID（可选）
      */
     @Async
-    public void executeReActLoop(SseEmitter emitter, String input, Long userId, Long agentConfigId) {
+    public void execute(SseEmitter emitter, String input, Long userId, Long agentConfigId) {
         AtomicInteger msgId = new AtomicInteger(1);
         OpenAiChatModel baseModel = mainModel.tongYiModel();
 
-        // 工作记忆：保存执行状态
         Map<String, Object> workingMemory = new HashMap<>();
         workingMemory.put("userInput", input);
 
@@ -116,7 +107,7 @@ public class ReActLoopService {
                     .map(tool -> tool.getSkillDefinition().getName())
                     .collect(java.util.stream.Collectors.joining("、"));
                 sendDataUpdate(emitter, msgId.getAndIncrement(),
-                    String.format("已加载 %d 个Skills：%s", skillTools.size(), skillsInfo),
+                    String.format("已加载 %d 个Skills: %s", skillTools.size(), skillsInfo),
                     "skills_loaded");
                 log.info("成功加载 {} 个Skills", skillTools.size());
             } else {
@@ -127,17 +118,17 @@ public class ReActLoopService {
         }
 
         try {
-            // ========== 阶段1：规划(Plan) ==========
-            sendStatusUpdate(emitter, msgId.getAndIncrement(), "🧠 正在分析任务并制定执行计划", "planning");
-            ExecutionPlanDTO plan = executePlanningPhase(baseModel, input);
+            // ========== 阶段1: 规划(Plan) ==========
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "正在分析任务并制定执行计划", "planning");
+            ExecutionPlanDTO plan = executePlanningPhase(baseModel, input, skillTools);
             workingMemory.put("plan", plan);
 
             sendDataUpdate(emitter, msgId.getAndIncrement(),
-                String.format("任务类型：%s | 复杂度：%s | 预计步骤：%d",
+                String.format("任务类型: %s | 复杂度: %s | 预计步骤: %d",
                     plan.getTaskType(), plan.getComplexity(), plan.getSteps().size()),
                 "plan");
 
-            // ========== 阶段2：ReAct循环执行 ==========
+            // ========== 阶段2: ReAct循环执行 ==========
             int maxIterations = plan.getMaxIterations() != null ? plan.getMaxIterations() : 3;
             int currentIteration = 0;
             boolean taskCompleted = false;
@@ -161,7 +152,7 @@ public class ReActLoopService {
                 workingMemory.put("observation", observation);
 
                 sendDataUpdate(emitter, msgId.getAndIncrement(),
-                    String.format("执行状态：%s | 完整性：%.0f%%",
+                    String.format("执行状态: %s | 完整性: %.0f%%",
                         observation.getIsSuccess() ? "成功" : "失败",
                         observation.getCompleteness() * 100),
                     "observation");
@@ -172,7 +163,7 @@ public class ReActLoopService {
                 workingMemory.put("reflection", reflection);
 
                 sendDataUpdate(emitter, msgId.getAndIncrement(),
-                    String.format("质量评分：%.0f%% | 建议：%s",
+                    String.format("质量评分: %.0f%% | 建议: %s",
                         reflection.getOverallScore() * 100,
                         reflection.getNextAction()),
                     "reflection");
@@ -185,70 +176,68 @@ public class ReActLoopService {
                 // 2.5 执行决策
                 switch (decision.getDecision()) {
                     case CONTINUE:
-                        log.info("决策：继续 - {}", decision.getReasoning());
+                        log.info("决策: 继续 - {}", decision.getReasoning());
                         sendStatusUpdate(emitter, msgId.getAndIncrement(), "质量合格，准备生成最终结果", "deciding");
                         taskCompleted = true;
                         finalResult = generateFinalResult(baseModel, workingMemory, emitter, msgId);
                         break;
 
                     case RETRY:
-                        log.info("决策：重试 - {}", decision.getReasoning());
+                        log.info("决策: 重试 - {}", decision.getReasoning());
                         sendStatusUpdate(emitter, msgId.getAndIncrement(),
                             String.format("检测到质量问题，准备重试（迭代%d/%d）", currentIteration + 1, maxIterations),
                             "retrying");
-                        // 继续下一轮循环
                         break;
 
                     case FALLBACK:
-                        log.info("决策：降级 - {}", decision.getReasoning());
+                        log.info("决策: 降级 - {}", decision.getReasoning());
                         sendStatusUpdate(emitter, msgId.getAndIncrement(), "启用备用方案", "fallback");
                         taskCompleted = true;
                         finalResult = executeFallbackStrategy(baseModel, plan, workingMemory, emitter, msgId);
                         break;
 
                     case ABORT:
-                        log.error("决策：中止 - {}", decision.getReasoning());
+                        log.error("决策: 中止 - {}", decision.getReasoning());
                         sendStatusUpdate(emitter, msgId.getAndIncrement(), "任务无法完成", "error");
-                        throw new RuntimeException("任务执行失败：" + decision.getReasoning());
+                        throw new RuntimeException("任务执行失败: " + decision.getReasoning());
 
                     case ESCALATE:
-                        log.warn("决策：请求人工 - {}", decision.getReasoning());
+                        log.warn("决策: 请求人工 - {}", decision.getReasoning());
                         sendStatusUpdate(emitter, msgId.getAndIncrement(), "需要人工介入", "escalate");
                         taskCompleted = true;
-                        finalResult = "抱歉，当前任务较复杂，建议人工处理。原因：" + decision.getReasoning();
+                        finalResult = "抱歉，当前任务较复杂，建议人工处理。原因: " + decision.getReasoning();
                         break;
 
                     default:
-                        log.warn("未知决策类型：{}", decision.getDecision());
+                        log.warn("未知决策类型: {}", decision.getDecision());
                         taskCompleted = true;
                         finalResult = generateFinalResult(baseModel, workingMemory, emitter, msgId);
                 }
             }
 
-            // 超过最大迭代次数仍未完成
             if (!taskCompleted) {
                 log.warn("达到最大迭代次数 {} 次，强制结束", maxIterations);
                 sendStatusUpdate(emitter, msgId.getAndIncrement(), "达到最大迭代次数，生成当前最佳结果", "max_iterations");
                 finalResult = generateFinalResult(baseModel, workingMemory, emitter, msgId);
             }
 
-            // ========== 阶段3：返回最终结果 ==========
+            // ========== 阶段3: 返回最终结果 ==========
             sendStatusUpdate(emitter, msgId.getAndIncrement(), "任务完成", "completed");
             sendDataUpdate(emitter, msgId.getAndIncrement(), finalResult, "final_result");
             emitter.complete();
 
         } catch (Exception e) {
-            log.error("ReAct循环执行失败", e);
-            sendStatusUpdate(emitter, msgId.getAndIncrement(), "执行出错：" + e.getMessage(), "error");
+            log.error("Agent工作流执行失败", e);
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "执行出错: " + e.getMessage(), "error");
             emitter.completeWithError(e);
         }
     }
 
     /**
-     * 阶段1：规划(Plan)
-     * 分析任务并生成执行计划
+     * 阶段1: 规划(Plan) - 支持技能感知
      */
-    private ExecutionPlanDTO executePlanningPhase(OpenAiChatModel model, String input) {
+    private ExecutionPlanDTO executePlanningPhase(OpenAiChatModel model, String input,
+            List<com.enumerate.disease_detection.Tools.DynamicSkillTool> skillTools) {
         try {
             log.info("========== 规划阶段 ==========");
 
@@ -257,14 +246,18 @@ public class ReActLoopService {
                 .chatModel(model)
                 .build();
 
-            String planJson = plannerAgent.plan(input);
-            log.info("生成的执行计划（原始）：{}", planJson);
+            String planInput = input;
+            if (skillTools != null && !skillTools.isEmpty()) {
+                String skillsDescription = skillLoaderService.generateSkillsPrompt(skillTools);
+                planInput = input + "\n\n可用Skills:\n" + skillsDescription;
+            }
 
-            // 清理JSON字符串并解析
+            String planJson = plannerAgent.plan(planInput);
+            log.info("生成的执行计划（原始）: {}", planJson);
+
             String cleanedJson = cleanJsonString(planJson);
             ExecutionPlanDTO plan = objectMapper.readValue(cleanedJson, ExecutionPlanDTO.class);
 
-            // 设置默认值
             if (plan.getMaxIterations() == null) {
                 plan.setMaxIterations(3);
             }
@@ -272,14 +265,12 @@ public class ReActLoopService {
             return plan;
         } catch (Exception e) {
             log.error("规划阶段失败，使用默认计划", e);
-            // 返回默认计划
             return createDefaultPlan(input);
         }
     }
 
     /**
-     * 阶段2.1：执行(Act)
-     * 执行计划中的各个步骤
+     * 阶段2.1: 执行(Act)
      */
     private Map<String, String> executeActingPhase(
         OpenAiChatModel model,
@@ -301,7 +292,7 @@ public class ReActLoopService {
             .build();
         String parsedInput = inputParser.parseInput(userInput);
         results.put("parsedInput", parsedInput);
-        log.info("输入解析结果：{}", parsedInput);
+        log.info("输入解析结果: {}", parsedInput);
 
         // 2. 路由判断
         sendStatusUpdate(emitter, msgId.getAndIncrement(), "识别任务类型", "routing");
@@ -311,9 +302,9 @@ public class ReActLoopService {
             .build();
         Boolean hasImage = router.route(parsedInput);
         results.put("hasImage", hasImage.toString());
-        log.info("是否包含图像：{}", hasImage);
+        log.info("是否包含图像: {}", hasImage);
 
-        // 3. 多模态识别（如果有图）
+        // 3. 多模态识别
         if (hasImage) {
             sendStatusUpdate(emitter, msgId.getAndIncrement(), "多模态分析中", "vision_analyzing");
             VisionAgent visionAgent = AgenticServices
@@ -324,7 +315,7 @@ public class ReActLoopService {
             String visionResult = visionAgent.chat(parsedInput);
             results.put("visionResult", visionResult);
             sendDataUpdate(emitter, msgId.getAndIncrement(), visionResult, "vision_result");
-            log.info("视觉识别结果：{}", visionResult);
+            log.info("视觉识别结果: {}", visionResult);
         } else {
             results.put("visionResult", "未发现图像，使用文本分析");
         }
@@ -346,7 +337,6 @@ public class ReActLoopService {
 
     /**
      * Skills执行阶段
-     * 判断是否需要调用Skill，如果需要则执行
      */
     private Map<String, String> executeSkillsPhase(
         OpenAiChatModel model,
@@ -358,17 +348,15 @@ public class ReActLoopService {
         Map<String, String> skillResults = new HashMap<>();
 
         try {
-            // 1. 生成可用Skills的描述
             String availableSkillsDesc = skillLoaderService.generateSkillsPrompt(skillTools);
 
-            // 2. 让SkillAgent分析是否需要调用Skill
             SkillAgent skillAgent = AgenticServices
                 .agentBuilder(SkillAgent.class)
                 .chatModel(model)
                 .build();
 
             String context = String.format(
-                "解析结果：%s\n视觉识别结果：%s",
+                "解析结果: %s\n视觉识别结果: %s",
                 previousResults.getOrDefault("parsedInput", ""),
                 previousResults.getOrDefault("visionResult", "")
             );
@@ -379,20 +367,17 @@ public class ReActLoopService {
                 context
             );
 
-            log.info("Skill调用计划（原始）：{}", skillPlanJson);
+            log.info("Skill调用计划（原始）: {}", skillPlanJson);
 
-            // 3. 解析Skill调用计划
             String cleanedJson = cleanJsonString(skillPlanJson);
             SkillCallPlanDTO skillPlan = objectMapper.readValue(cleanedJson, SkillCallPlanDTO.class);
 
-            log.info("Skill调用计划：needSkill={}, skillName={}, reasoning={}",
+            log.info("Skill调用计划: needSkill={}, skillName={}, reasoning={}",
                 skillPlan.getNeedSkill(), skillPlan.getSkillName(), skillPlan.getReasoning());
 
             skillResults.put("skillAnalysis", skillPlan.getReasoning());
 
-            // 4. 如果需要调用Skill，执行调用
             if (Boolean.TRUE.equals(skillPlan.getNeedSkill()) && skillPlan.getSkillName() != null) {
-                // 查找对应的Skill
                 com.enumerate.disease_detection.Tools.DynamicSkillTool targetSkill = skillTools.stream()
                     .filter(tool -> tool.getSkillDefinition().getName().equals(skillPlan.getSkillName()))
                     .findFirst()
@@ -400,11 +385,10 @@ public class ReActLoopService {
 
                 if (targetSkill != null) {
                     sendStatusUpdate(emitter, msgId.getAndIncrement(),
-                        String.format("正在调用Skill：%s", skillPlan.getSkillName()),
+                        String.format("正在调用Skill: %s", skillPlan.getSkillName()),
                         "skill_executing");
 
                     try {
-                        // 执行Skill
                         String skillResult = targetSkill.execute(skillPlan.getParameters());
                         skillResults.put("skillResult", skillResult);
                         skillResults.put("skillName", skillPlan.getSkillName());
@@ -413,24 +397,24 @@ public class ReActLoopService {
                             String.format("[%s] %s", skillPlan.getSkillName(), skillResult),
                             "skill_result");
 
-                        log.info("Skill执行成功：{} -> {}", skillPlan.getSkillName(), skillResult);
+                        log.info("Skill执行成功: {} -> {}", skillPlan.getSkillName(), skillResult);
 
                     } catch (Exception e) {
-                        log.error("Skill执行失败：{}", skillPlan.getSkillName(), e);
-                        skillResults.put("skillError", "Skill执行失败：" + e.getMessage());
+                        log.error("Skill执行失败: {}", skillPlan.getSkillName(), e);
+                        skillResults.put("skillError", "Skill执行失败: " + e.getMessage());
                     }
                 } else {
-                    log.warn("未找到Skill：{}", skillPlan.getSkillName());
+                    log.warn("未找到Skill: {}", skillPlan.getSkillName());
                     skillResults.put("skillError", "未找到指定的Skill");
                 }
             } else {
-                log.info("无需调用Skill：{}", skillPlan.getReasoning());
+                log.info("无需调用Skill: {}", skillPlan.getReasoning());
                 skillResults.put("skillResult", "未调用Skill");
             }
 
         } catch (Exception e) {
             log.error("Skills阶段失败", e);
-            skillResults.put("skillError", "Skills分析失败：" + e.getMessage());
+            skillResults.put("skillError", "Skills分析失败: " + e.getMessage());
         }
 
         return skillResults;
@@ -450,7 +434,7 @@ public class ReActLoopService {
                 AgenticServices.agentBuilder(FieldManageExpert.class).chatModel(model).outputKey("fieldManage").build()
             )
                 .output(t -> {
-                    expertResults.put("safeNotice", t.readState("pesticide", ""));
+                    expertResults.put("safeNotice", t.readState("safeNotice", ""));
                     expertResults.put("pesticide", t.readState("pesticide", ""));
                     expertResults.put("fieldManage", t.readState("fieldManage", ""));
                     return t;
@@ -462,13 +446,12 @@ public class ReActLoopService {
         input.put("visionResult", previousResults.getOrDefault("visionResult", ""));
         parallelExperts.invoke(input);
 
-        log.info("专家分析完成：{}", expertResults);
+        log.info("专家分析完成: {}", expertResults);
         return expertResults;
     }
 
     /**
-     * 阶段2.2：观察(Observe)
-     * 观察执行结果并提取关键信息
+     * 阶段2.2: 观察(Observe)
      */
     private ObservationDTO executeObservingPhase(
         OpenAiChatModel model,
@@ -489,8 +472,7 @@ public class ReActLoopService {
                 "完整的病害诊断和解决方案"
             );
 
-            log.info("观察结果（原始）：{}", observationJson);
-            // 清理JSON字符串并解析
+            log.info("观察结果（原始）: {}", observationJson);
             String cleanedJson = cleanJsonString(observationJson);
             return objectMapper.readValue(cleanedJson, ObservationDTO.class);
         } catch (Exception e) {
@@ -500,8 +482,7 @@ public class ReActLoopService {
     }
 
     /**
-     * 阶段2.3：反思(Reflect)
-     * 评估执行质量
+     * 阶段2.3: 反思(Reflect)
      */
     private ReflectionDTO executeReflectingPhase(
         OpenAiChatModel model,
@@ -525,8 +506,7 @@ public class ReActLoopService {
                 currentIteration - 1
             );
 
-            log.info("反思结果（原始）：{}", reflectionJson);
-            // 清理JSON字符串并解析
+            log.info("反思结果（原始）: {}", reflectionJson);
             String cleanedJson = cleanJsonString(reflectionJson);
             return objectMapper.readValue(cleanedJson, ReflectionDTO.class);
         } catch (Exception e) {
@@ -536,8 +516,7 @@ public class ReActLoopService {
     }
 
     /**
-     * 阶段2.4：决策(Decide)
-     * 根据反思结果做出决策
+     * 阶段2.4: 决策(Decide)
      */
     private DecisionDTO executeDecidingPhase(
         OpenAiChatModel model,
@@ -560,13 +539,12 @@ public class ReActLoopService {
                 plan.getSteps().size(),
                 objectMapper.writeValueAsString(reflection),
                 currentIteration - 1,
-                2,  // maxRetries
+                2,
                 currentIteration,
                 maxIterations
             );
 
-            log.info("决策结果（原始）：{}", decisionJson);
-            // 清理JSON字符串并解析
+            log.info("决策结果（原始）: {}", decisionJson);
             String cleanedJson = cleanJsonString(decisionJson);
             return objectMapper.readValue(cleanedJson, DecisionDTO.class);
         } catch (Exception e) {
@@ -593,20 +571,17 @@ public class ReActLoopService {
 
         Map<String, String> executionResults = (Map<String, String>) memory.get("executionResults");
 
-        // 构建完整的解决方案，包括Skill结果
         StringBuilder solutionBuilder = new StringBuilder();
 
-        // 添加Skill结果（如果有）
         if (executionResults.containsKey("skillResult") &&
             !"未调用Skill".equals(executionResults.get("skillResult"))) {
             String skillName = executionResults.getOrDefault("skillName", "Skill");
             String skillResult = executionResults.get("skillResult");
-            solutionBuilder.append(String.format("%s结果：%s\n\n", skillName, skillResult));
+            solutionBuilder.append(String.format("%s结果: %s\n\n", skillName, skillResult));
         }
 
-        // 添加专家分析结果
         String diseaseSolution = String.format(
-            "安全注意：%s\n植保用药：%s\n田间管理：%s",
+            "安全注意: %s\n植保用药: %s\n田间管理: %s",
             executionResults.getOrDefault("safeNotice", ""),
             executionResults.getOrDefault("pesticide", ""),
             executionResults.getOrDefault("fieldManage", "")
@@ -628,9 +603,8 @@ public class ReActLoopService {
         AtomicInteger msgId
     ) throws IOException {
         sendStatusUpdate(emitter, msgId.getAndIncrement(), "执行备用方案", "fallback");
-        log.info("执行备用策略：{}", plan.getFallbackStrategy());
+        log.info("执行备用策略: {}", plan.getFallbackStrategy());
 
-        // 使用简化流程生成结果
         return generateFinalResult(model, memory, emitter, msgId);
     }
 

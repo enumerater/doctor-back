@@ -6,6 +6,7 @@ import com.enumerate.disease_detection.Common.Result;
 import com.enumerate.disease_detection.Local.UserContextHolder;
 import com.enumerate.disease_detection.Mapper.SessionMapper;
 import com.enumerate.disease_detection.POJO.DTO.ChatSessionDTO;
+import com.enumerate.disease_detection.POJO.DTO.SessionAgentConfigDTO;
 import com.enumerate.disease_detection.POJO.PO.ChatSessionPO;
 import com.enumerate.disease_detection.POJO.VO.SessionVO;
 import com.enumerate.disease_detection.Tools.TitleTool;
@@ -15,10 +16,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/session")
+@Slf4j
 public class SessionController {
     @Autowired
     private SessionMapper sessionMapper;
@@ -112,11 +116,14 @@ public class SessionController {
 
     @PutMapping("/{sessionId}/agentConfig")
     @CrossOrigin
-    public Result<String> updateAgentConfig(@PathVariable("sessionId") Long sessionId, @RequestBody Long configId) {
+    public Result<String> updateAgentConfig(@PathVariable("sessionId") String sessionId,  @RequestBody SessionAgentConfigDTO sessionAgentConfigDTO) {
+        log.info("sessionId: {}, configId: {}", sessionId, sessionAgentConfigDTO.getConfigId());
+
         UpdateWrapper<ChatSessionPO> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("session_id", sessionId);
-        updateWrapper.set("agent_config_id", configId);
+        updateWrapper.set("agent_config_id", sessionAgentConfigDTO.getConfigId());
         sessionMapper.update(null, updateWrapper);
+
         return Result.success("更新成功");
     }
 }

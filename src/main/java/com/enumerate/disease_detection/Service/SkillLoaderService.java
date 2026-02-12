@@ -57,7 +57,7 @@ public class SkillLoaderService {
                 return Collections.emptyList();
             }
 
-            List<Long> skillIdList = parseSkillIds(enabledSkillIds);
+            List<String> skillIdList = parseSkillIds(enabledSkillIds);
             if (skillIdList.isEmpty()) {
                 log.warn("解析enabledSkillIds失败或为空");
                 return Collections.emptyList();
@@ -65,8 +65,10 @@ public class SkillLoaderService {
 
             log.info("需要加载的Skill IDs: {}", skillIdList);
 
-            // 3. 从数据库查询Skills
-            List<SkillsPO> skillsPOList = skillsMapper.selectBatchIds(skillIdList);
+            // 3. 从数据库按name查询Skills
+            LambdaQueryWrapper<SkillsPO> skillWrapper = new LambdaQueryWrapper<>();
+            skillWrapper.in(SkillsPO::getName, skillIdList);
+            List<SkillsPO> skillsPOList = skillsMapper.selectList(skillWrapper);
             if (skillsPOList == null || skillsPOList.isEmpty()) {
                 log.warn("未查询到任何Skill记录");
                 return Collections.emptyList();
@@ -108,18 +110,18 @@ public class SkillLoaderService {
     }
 
     /**
-     * 解析enabledSkillIds字符串为Long列表
+     * 解析enabledSkillIds字符串为String列表
      * 支持格式：
-     * - 逗号分隔："1,2,3,4"
-     * - JSON数组："[1,2,3,4]"
+     * - 逗号分隔："weather-forecast,price-query"
+     * - JSON数组：["weather-forecast","price-query"]
      */
-    private List<Long> parseSkillIds(String enabledSkillIds) {
+    private List<String> parseSkillIds(String enabledSkillIds) {
         try {
             String trimmed = enabledSkillIds.trim();
 
             // 尝试解析为JSON数组
             if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                return objectMapper.readValue(trimmed, new TypeReference<List<Long>>() {
+                return objectMapper.readValue(trimmed, new TypeReference<List<String>>() {
                 });
             }
 
@@ -127,7 +129,6 @@ public class SkillLoaderService {
             return Arrays.stream(trimmed.split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
-                    .map(Long::parseLong)
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
@@ -200,7 +201,6 @@ public class SkillLoaderService {
         }
 
         prompt.append("当用户的需求匹配某个Skill时，请主动建议或直接调用该Skill。\n");
-        prompt.append("调用格式：使用{SKILL:技能名称:参数JSON}来调用Skill。\n");
 
         return prompt.toString();
     }
