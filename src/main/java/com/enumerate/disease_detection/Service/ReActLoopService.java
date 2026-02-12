@@ -45,6 +45,46 @@ public class ReActLoopService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
+     * 清理JSON字符串，移除markdown代码块标记
+     *
+     * @param jsonString 可能包含markdown标记的JSON字符串
+     * @return 纯净的JSON字符串
+     */
+    private String cleanJsonString(String jsonString) {
+        if (jsonString == null || jsonString.isEmpty()) {
+            return jsonString;
+        }
+
+        String cleaned = jsonString.trim();
+
+        // 移除markdown代码块标记
+        // 匹配 ```json...``` 或 ```...```
+        if (cleaned.startsWith("```")) {
+            // 找到第一个换行符
+            int firstNewline = cleaned.indexOf('\n');
+            if (firstNewline > 0) {
+                cleaned = cleaned.substring(firstNewline + 1);
+            } else {
+                // 如果没有换行符，尝试移除```json或```
+                cleaned = cleaned.replaceFirst("^```(json)?\\s*", "");
+            }
+        }
+
+        if (cleaned.endsWith("```")) {
+            int lastBackticks = cleaned.lastIndexOf("```");
+            cleaned = cleaned.substring(0, lastBackticks);
+        }
+
+        // 移除可能的前后空白
+        cleaned = cleaned.trim();
+
+        log.debug("JSON清理前: {}", jsonString.substring(0, Math.min(100, jsonString.length())));
+        log.debug("JSON清理后: {}", cleaned.substring(0, Math.min(100, cleaned.length())));
+
+        return cleaned;
+    }
+
+    /**
      * 执行ReAct循环
      *
      * @param emitter SSE发送器
@@ -80,16 +120,16 @@ public class ReActLoopService {
                 currentIteration++;
                 log.info("========== ReAct循环迭代 {}/{} ==========", currentIteration, maxIterations);
                 sendStatusUpdate(emitter, msgId.getAndIncrement(),
-                    String.format("🔄 ReAct循环 - 迭代 %d/%d", currentIteration, maxIterations),
+                    String.format("ReAct循环 - 迭代 %d/%d", currentIteration, maxIterations),
                     "iterating");
 
                 // 2.1 执行(Act)
-                sendStatusUpdate(emitter, msgId.getAndIncrement(), "⚡ 执行任务步骤", "acting");
+                sendStatusUpdate(emitter, msgId.getAndIncrement(), "执行任务步骤", "acting");
                 Map<String, String> executionResults = executeActingPhase(baseModel, plan, workingMemory, emitter, msgId);
                 workingMemory.put("executionResults", executionResults);
 
                 // 2.2 观察(Observe)
-                sendStatusUpdate(emitter, msgId.getAndIncrement(), "👁️ 观察执行结果", "observing");
+                sendStatusUpdate(emitter, msgId.getAndIncrement(), "观察执行结果", "observing");
                 ObservationDTO observation = executeObservingPhase(baseModel, plan, executionResults);
                 workingMemory.put("observation", observation);
 
@@ -100,7 +140,7 @@ public class ReActLoopService {
                     "observation");
 
                 // 2.3 反思(Reflect)
-                sendStatusUpdate(emitter, msgId.getAndIncrement(), "🤔 反思执行质量", "reflecting");
+                sendStatusUpdate(emitter, msgId.getAndIncrement(), "反思执行质量", "reflecting");
                 ReflectionDTO reflection = executeReflectingPhase(baseModel, plan, observation, currentIteration);
                 workingMemory.put("reflection", reflection);
 
@@ -111,7 +151,7 @@ public class ReActLoopService {
                     "reflection");
 
                 // 2.4 决策(Decide)
-                sendStatusUpdate(emitter, msgId.getAndIncrement(), "🎯 制定下一步决策", "deciding");
+                sendStatusUpdate(emitter, msgId.getAndIncrement(), "制定下一步决策", "deciding");
                 DecisionDTO decision = executeDecidingPhase(baseModel, plan, reflection, currentIteration, maxIterations);
                 workingMemory.put("decision", decision);
 
@@ -119,7 +159,7 @@ public class ReActLoopService {
                 switch (decision.getDecision()) {
                     case CONTINUE:
                         log.info("决策：继续 - {}", decision.getReasoning());
-                        sendStatusUpdate(emitter, msgId.getAndIncrement(), "✅ 质量合格，准备生成最终结果", "deciding");
+                        sendStatusUpdate(emitter, msgId.getAndIncrement(), "质量合格，准备生成最终结果", "deciding");
                         taskCompleted = true;
                         finalResult = generateFinalResult(baseModel, workingMemory, emitter, msgId);
                         break;
@@ -127,26 +167,26 @@ public class ReActLoopService {
                     case RETRY:
                         log.info("决策：重试 - {}", decision.getReasoning());
                         sendStatusUpdate(emitter, msgId.getAndIncrement(),
-                            String.format("🔄 检测到质量问题，准备重试（迭代%d/%d）", currentIteration + 1, maxIterations),
+                            String.format("检测到质量问题，准备重试（迭代%d/%d）", currentIteration + 1, maxIterations),
                             "retrying");
                         // 继续下一轮循环
                         break;
 
                     case FALLBACK:
                         log.info("决策：降级 - {}", decision.getReasoning());
-                        sendStatusUpdate(emitter, msgId.getAndIncrement(), "⚠️ 启用备用方案", "fallback");
+                        sendStatusUpdate(emitter, msgId.getAndIncrement(), "启用备用方案", "fallback");
                         taskCompleted = true;
                         finalResult = executeFallbackStrategy(baseModel, plan, workingMemory, emitter, msgId);
                         break;
 
                     case ABORT:
                         log.error("决策：中止 - {}", decision.getReasoning());
-                        sendStatusUpdate(emitter, msgId.getAndIncrement(), "❌ 任务无法完成", "error");
+                        sendStatusUpdate(emitter, msgId.getAndIncrement(), "任务无法完成", "error");
                         throw new RuntimeException("任务执行失败：" + decision.getReasoning());
 
                     case ESCALATE:
                         log.warn("决策：请求人工 - {}", decision.getReasoning());
-                        sendStatusUpdate(emitter, msgId.getAndIncrement(), "🆘 需要人工介入", "escalate");
+                        sendStatusUpdate(emitter, msgId.getAndIncrement(), "需要人工介入", "escalate");
                         taskCompleted = true;
                         finalResult = "抱歉，当前任务较复杂，建议人工处理。原因：" + decision.getReasoning();
                         break;
@@ -161,18 +201,18 @@ public class ReActLoopService {
             // 超过最大迭代次数仍未完成
             if (!taskCompleted) {
                 log.warn("达到最大迭代次数 {} 次，强制结束", maxIterations);
-                sendStatusUpdate(emitter, msgId.getAndIncrement(), "⏱️ 达到最大迭代次数，生成当前最佳结果", "max_iterations");
+                sendStatusUpdate(emitter, msgId.getAndIncrement(), "达到最大迭代次数，生成当前最佳结果", "max_iterations");
                 finalResult = generateFinalResult(baseModel, workingMemory, emitter, msgId);
             }
 
             // ========== 阶段3：返回最终结果 ==========
-            sendStatusUpdate(emitter, msgId.getAndIncrement(), "✅ 任务完成", "completed");
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "任务完成", "completed");
             sendDataUpdate(emitter, msgId.getAndIncrement(), finalResult, "final_result");
             emitter.complete();
 
         } catch (Exception e) {
             log.error("ReAct循环执行失败", e);
-            sendStatusUpdate(emitter, msgId.getAndIncrement(), "❌ 执行出错：" + e.getMessage(), "error");
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "执行出错：" + e.getMessage(), "error");
             emitter.completeWithError(e);
         }
     }
@@ -191,10 +231,11 @@ public class ReActLoopService {
                 .build();
 
             String planJson = plannerAgent.plan(input);
-            log.info("生成的执行计划：{}", planJson);
+            log.info("生成的执行计划（原始）：{}", planJson);
 
-            // 解析JSON
-            ExecutionPlanDTO plan = objectMapper.readValue(planJson, ExecutionPlanDTO.class);
+            // 清理JSON字符串并解析
+            String cleanedJson = cleanJsonString(planJson);
+            ExecutionPlanDTO plan = objectMapper.readValue(cleanedJson, ExecutionPlanDTO.class);
 
             // 设置默认值
             if (plan.getMaxIterations() == null) {
@@ -225,7 +266,7 @@ public class ReActLoopService {
         String userInput = (String) memory.get("userInput");
 
         // 1. 输入解析
-        sendStatusUpdate(emitter, msgId.getAndIncrement(), "📝 解析用户输入", "parsing");
+        sendStatusUpdate(emitter, msgId.getAndIncrement(), "解析用户输入", "parsing");
         InputParserAgent inputParser = AgenticServices
             .agentBuilder(InputParserAgent.class)
             .chatModel(model)
@@ -235,7 +276,7 @@ public class ReActLoopService {
         log.info("输入解析结果：{}", parsedInput);
 
         // 2. 路由判断
-        sendStatusUpdate(emitter, msgId.getAndIncrement(), "🔀 识别任务类型", "routing");
+        sendStatusUpdate(emitter, msgId.getAndIncrement(), "识别任务类型", "routing");
         RouterAgent router = AgenticServices
             .agentBuilder(RouterAgent.class)
             .chatModel(model)
@@ -246,7 +287,7 @@ public class ReActLoopService {
 
         // 3. 多模态识别（如果有图）
         if (hasImage) {
-            sendStatusUpdate(emitter, msgId.getAndIncrement(), "🖼️ 多模态分析中", "vision_analyzing");
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "多模态分析中", "vision_analyzing");
             VisionAgent visionAgent = AgenticServices
                 .agentBuilder(VisionAgent.class)
                 .chatModel(model)
@@ -261,7 +302,7 @@ public class ReActLoopService {
         }
 
         // 4. 并行专家分析
-        sendStatusUpdate(emitter, msgId.getAndIncrement(), "👥 专家团队分析中", "expert_analyzing");
+        sendStatusUpdate(emitter, msgId.getAndIncrement(), "专家团队分析中", "expert_analyzing");
         Map<String, String> expertResults = executeParallelExperts(model, results);
         results.putAll(expertResults);
 
@@ -281,6 +322,12 @@ public class ReActLoopService {
                 AgenticServices.agentBuilder(PesticideExpert.class).chatModel(model).outputKey("pesticide").build(),
                 AgenticServices.agentBuilder(FieldManageExpert.class).chatModel(model).outputKey("fieldManage").build()
             )
+                .output(t -> {
+                    expertResults.put("safeNotice", t.readState("pesticide", ""));
+                    expertResults.put("pesticide", t.readState("pesticide", ""));
+                    expertResults.put("fieldManage", t.readState("fieldManage", ""));
+                    return t;
+                })
             .executor(Executors.newFixedThreadPool(3))
             .build();
 
@@ -289,9 +336,9 @@ public class ReActLoopService {
         parallelExperts.invoke(input);
 
         // 这里简化处理，实际应从AgenticScope读取
-        expertResults.put("safeNotice", "安全注意事项已生成");
-        expertResults.put("pesticide", "植保用药方案已生成");
-        expertResults.put("fieldManage", "田间管理建议已生成");
+//        expertResults.put("safeNotice", "");
+//        expertResults.put("pesticide", "");
+//        expertResults.put("fieldManage", "");
 
         log.info("专家分析完成：{}", expertResults);
         return expertResults;
@@ -320,8 +367,10 @@ public class ReActLoopService {
                 "完整的病害诊断和解决方案"
             );
 
-            log.info("观察结果：{}", observationJson);
-            return objectMapper.readValue(observationJson, ObservationDTO.class);
+            log.info("观察结果（原始）：{}", observationJson);
+            // 清理JSON字符串并解析
+            String cleanedJson = cleanJsonString(observationJson);
+            return objectMapper.readValue(cleanedJson, ObservationDTO.class);
         } catch (Exception e) {
             log.error("观察阶段失败，使用默认观察结果", e);
             return createDefaultObservation(executionResults);
@@ -354,8 +403,10 @@ public class ReActLoopService {
                 currentIteration - 1
             );
 
-            log.info("反思结果：{}", reflectionJson);
-            return objectMapper.readValue(reflectionJson, ReflectionDTO.class);
+            log.info("反思结果（原始）：{}", reflectionJson);
+            // 清理JSON字符串并解析
+            String cleanedJson = cleanJsonString(reflectionJson);
+            return objectMapper.readValue(cleanedJson, ReflectionDTO.class);
         } catch (Exception e) {
             log.error("反思阶段失败，使用默认反思结果", e);
             return createDefaultReflection(observation);
@@ -392,8 +443,10 @@ public class ReActLoopService {
                 maxIterations
             );
 
-            log.info("决策结果：{}", decisionJson);
-            return objectMapper.readValue(decisionJson, DecisionDTO.class);
+            log.info("决策结果（原始）：{}", decisionJson);
+            // 清理JSON字符串并解析
+            String cleanedJson = cleanJsonString(decisionJson);
+            return objectMapper.readValue(cleanedJson, DecisionDTO.class);
         } catch (Exception e) {
             log.error("决策阶段失败，使用默认决策", e);
             return createDefaultDecision(reflection, currentIteration, maxIterations);
@@ -409,7 +462,7 @@ public class ReActLoopService {
         SseEmitter emitter,
         AtomicInteger msgId
     ) throws IOException {
-        sendStatusUpdate(emitter, msgId.getAndIncrement(), "📊 汇总最终结果", "summarizing");
+        sendStatusUpdate(emitter, msgId.getAndIncrement(), "汇总最终结果", "summarizing");
 
         SummaryAgent summaryAgent = AgenticServices
             .agentBuilder(SummaryAgent.class)
@@ -437,7 +490,7 @@ public class ReActLoopService {
         SseEmitter emitter,
         AtomicInteger msgId
     ) throws IOException {
-        sendStatusUpdate(emitter, msgId.getAndIncrement(), "🔄 执行备用方案", "fallback");
+        sendStatusUpdate(emitter, msgId.getAndIncrement(), "执行备用方案", "fallback");
         log.info("执行备用策略：{}", plan.getFallbackStrategy());
 
         // 使用简化流程生成结果

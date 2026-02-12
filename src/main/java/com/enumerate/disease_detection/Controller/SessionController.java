@@ -109,4 +109,14 @@ public class SessionController {
         sessionMapper.update(null, updateWrapper);
         return Result.success("更新成功");
     }
+
+    @PutMapping("/{sessionId}/agentConfig")
+    @CrossOrigin
+    public Result<String> updateAgentConfig(@PathVariable("sessionId") Long sessionId, @RequestBody Long configId) {
+        UpdateWrapper<ChatSessionPO> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("session_id", sessionId);
+        updateWrapper.set("agent_config_id", configId);
+        sessionMapper.update(null, updateWrapper);
+        return Result.success("更新成功");
+    }
 }

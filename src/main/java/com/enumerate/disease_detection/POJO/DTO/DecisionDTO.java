@@ -69,9 +69,10 @@ public class DecisionDTO {
         private Boolean modifyPlan;
 
         /**
-         * 新增步骤
+         * 新增步骤（支持字符串或对象）
+         * 可以是：["步骤描述"] 或 [{"step":1, "action":"xxx"}]
          */
-        private List<Map<String, Object>> newSteps;
+        private List<Object> newSteps;
 
         /**
          * 策略变更描述

@@ -21,6 +21,8 @@ public interface PlannerAgent {
         "3. 制定执行计划：列出需要的步骤和工具",
         "4. 预估所需资源：需要调用的专家、工具、时间复杂度",
         "",
+        "**重要：必须返回纯JSON格式，不要使用markdown代码块（不要```json），直接返回JSON对象**",
+        "",
         "输出格式（JSON）：",
         "{",
         "  \"taskType\": \"图像诊断\" | \"文本咨询\" | \"混合任务\",",
@@ -38,7 +40,8 @@ public interface PlannerAgent {
         "注意：",
         "- 如果输入包含图片URL，必须包含VisionTool步骤",
         "- 简单任务设置maxIterations=1，复杂任务设置maxIterations=3-5",
-        "- 始终提供fallback策略确保任务能完成"
+        "- 始终提供fallback策略确保任务能完成",
+        "- 直接返回JSON对象，不要包含任何其他文字或格式标记"
     })
     @UserMessage({
         "用户输入：{{userInput}}",

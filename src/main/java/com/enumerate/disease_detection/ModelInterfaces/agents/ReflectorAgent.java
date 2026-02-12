@@ -42,7 +42,7 @@ public interface ReflectorAgent {
         "    \"建议1：调整视觉模型参数\",",
         "    \"建议2：增加RAG知识检索\"",
         "  ],",
-        "  \"nextAction\": \"继续\" | \"重试当前步骤\" | \"降级处理\" | \"请求人工\"",
+        "  \"nextAction\": \"继续\" | \"重试当前步骤\" | \"降级处理\" | \"请求人工\",",
         "  \"reasoning\": \"决策理由\"",
         "}",
         "",
@@ -50,7 +50,9 @@ public interface ReflectorAgent {
         "- overallScore >= 0.8：继续下一步",
         "- 0.5 <= overallScore < 0.8：考虑重试或优化",
         "- overallScore < 0.5：必须重试或降级",
-        "- 已重试2次仍失败：降级或请求人工"
+        "- 已重试2次仍失败：降级或请求人工",
+        "",
+        "**重要：必须返回纯JSON格式，不要使用markdown代码块（不要```json），直接返回JSON对象**"
     })
     @UserMessage({
         "任务计划：{{plan}}",

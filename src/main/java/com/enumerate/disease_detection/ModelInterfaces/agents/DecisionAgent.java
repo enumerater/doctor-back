@@ -35,7 +35,7 @@ public interface DecisionAgent {
         "  \"reasoning\": \"决策理由\",",
         "  \"adjustments\": {",
         "    \"modifyPlan\": true | false,",
-        "    \"newSteps\": [...],",
+        "    \"newSteps\": [\"步骤描述1\", \"步骤描述2\"],",
         "    \"changeStrategy\": \"描述\"",
         "  },",
         "  \"fallbackPlan\": {",
@@ -54,7 +54,9 @@ public interface DecisionAgent {
         "- 分数 < 0.5 且重试次数 >= 2 → FALLBACK",
         "- 关键步骤失败 → ABORT 或 ESCALATE",
         "- 非关键步骤失败 → SKIP",
-        "- 超过最大迭代次数 → FALLBACK 或 ESCALATE"
+        "- 超过最大迭代次数 → FALLBACK 或 ESCALATE",
+        "",
+        "**重要：必须返回纯JSON格式，不要使用markdown代码块（不要```json），直接返回JSON对象**"
     })
     @UserMessage({
         "执行计划：{{plan}}",
