@@ -42,6 +42,9 @@ public class ReActLoopService {
     @Autowired
     private VisioTool visioTool;
 
+    @Autowired
+    private SkillLoaderService skillLoaderService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -89,15 +92,39 @@ public class ReActLoopService {
      *
      * @param emitter SSE发送器
      * @param input 用户输入
+     * @param userId 用户ID
+     * @param agentConfigId Agent配置ID（可为null，将使用默认配置）
      */
     @Async
-    public void executeReActLoop(SseEmitter emitter, String input) {
+    public void executeReActLoop(SseEmitter emitter, String input, Long userId, Long agentConfigId) {
         AtomicInteger msgId = new AtomicInteger(1);
         OpenAiChatModel baseModel = mainModel.tongYiModel();
 
         // 工作记忆：保存执行状态
         Map<String, Object> workingMemory = new HashMap<>();
         workingMemory.put("userInput", input);
+
+        // 加载用户的Skills
+        List<com.enumerate.disease_detection.Tools.DynamicSkillTool> skillTools = Collections.emptyList();
+        try {
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "加载用户Skills配置", "loading_skills");
+            skillTools = skillLoaderService.loadSkillsForUser(userId, agentConfigId);
+            workingMemory.put("availableSkills", skillTools);
+
+            if (!skillTools.isEmpty()) {
+                String skillsInfo = skillTools.stream()
+                    .map(tool -> tool.getSkillDefinition().getName())
+                    .collect(java.util.stream.Collectors.joining("、"));
+                sendDataUpdate(emitter, msgId.getAndIncrement(),
+                    String.format("已加载 %d 个Skills：%s", skillTools.size(), skillsInfo),
+                    "skills_loaded");
+                log.info("成功加载 {} 个Skills", skillTools.size());
+            } else {
+                log.info("当前配置未启用任何Skill");
+            }
+        } catch (Exception e) {
+            log.error("加载Skills失败，继续执行", e);
+        }
 
         try {
             // ========== 阶段1：规划(Plan) ==========
@@ -125,7 +152,7 @@ public class ReActLoopService {
 
                 // 2.1 执行(Act)
                 sendStatusUpdate(emitter, msgId.getAndIncrement(), "执行任务步骤", "acting");
-                Map<String, String> executionResults = executeActingPhase(baseModel, plan, workingMemory, emitter, msgId);
+                Map<String, String> executionResults = executeActingPhase(baseModel, plan, workingMemory, emitter, msgId, skillTools);
                 workingMemory.put("executionResults", executionResults);
 
                 // 2.2 观察(Observe)
@@ -259,7 +286,8 @@ public class ReActLoopService {
         ExecutionPlanDTO plan,
         Map<String, Object> memory,
         SseEmitter emitter,
-        AtomicInteger msgId
+        AtomicInteger msgId,
+        List<com.enumerate.disease_detection.Tools.DynamicSkillTool> skillTools
     ) throws IOException {
         log.info("========== 执行阶段 ==========");
         Map<String, String> results = new HashMap<>();
@@ -301,12 +329,111 @@ public class ReActLoopService {
             results.put("visionResult", "未发现图像，使用文本分析");
         }
 
-        // 4. 并行专家分析
+        // 4. Skill调用判断与执行
+        if (skillTools != null && !skillTools.isEmpty()) {
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "分析是否需要调用Skills", "skill_analyzing");
+            Map<String, String> skillResults = executeSkillsPhase(model, results, skillTools, emitter, msgId);
+            results.putAll(skillResults);
+        }
+
+        // 5. 并行专家分析
         sendStatusUpdate(emitter, msgId.getAndIncrement(), "专家团队分析中", "expert_analyzing");
         Map<String, String> expertResults = executeParallelExperts(model, results);
         results.putAll(expertResults);
 
         return results;
+    }
+
+    /**
+     * Skills执行阶段
+     * 判断是否需要调用Skill，如果需要则执行
+     */
+    private Map<String, String> executeSkillsPhase(
+        OpenAiChatModel model,
+        Map<String, String> previousResults,
+        List<com.enumerate.disease_detection.Tools.DynamicSkillTool> skillTools,
+        SseEmitter emitter,
+        AtomicInteger msgId
+    ) throws IOException {
+        Map<String, String> skillResults = new HashMap<>();
+
+        try {
+            // 1. 生成可用Skills的描述
+            String availableSkillsDesc = skillLoaderService.generateSkillsPrompt(skillTools);
+
+            // 2. 让SkillAgent分析是否需要调用Skill
+            SkillAgent skillAgent = AgenticServices
+                .agentBuilder(SkillAgent.class)
+                .chatModel(model)
+                .build();
+
+            String context = String.format(
+                "解析结果：%s\n视觉识别结果：%s",
+                previousResults.getOrDefault("parsedInput", ""),
+                previousResults.getOrDefault("visionResult", "")
+            );
+
+            String skillPlanJson = skillAgent.analyzeSkillNeed(
+                availableSkillsDesc,
+                previousResults.getOrDefault("parsedInput", ""),
+                context
+            );
+
+            log.info("Skill调用计划（原始）：{}", skillPlanJson);
+
+            // 3. 解析Skill调用计划
+            String cleanedJson = cleanJsonString(skillPlanJson);
+            SkillCallPlanDTO skillPlan = objectMapper.readValue(cleanedJson, SkillCallPlanDTO.class);
+
+            log.info("Skill调用计划：needSkill={}, skillName={}, reasoning={}",
+                skillPlan.getNeedSkill(), skillPlan.getSkillName(), skillPlan.getReasoning());
+
+            skillResults.put("skillAnalysis", skillPlan.getReasoning());
+
+            // 4. 如果需要调用Skill，执行调用
+            if (Boolean.TRUE.equals(skillPlan.getNeedSkill()) && skillPlan.getSkillName() != null) {
+                // 查找对应的Skill
+                com.enumerate.disease_detection.Tools.DynamicSkillTool targetSkill = skillTools.stream()
+                    .filter(tool -> tool.getSkillDefinition().getName().equals(skillPlan.getSkillName()))
+                    .findFirst()
+                    .orElse(null);
+
+                if (targetSkill != null) {
+                    sendStatusUpdate(emitter, msgId.getAndIncrement(),
+                        String.format("正在调用Skill：%s", skillPlan.getSkillName()),
+                        "skill_executing");
+
+                    try {
+                        // 执行Skill
+                        String skillResult = targetSkill.execute(skillPlan.getParameters());
+                        skillResults.put("skillResult", skillResult);
+                        skillResults.put("skillName", skillPlan.getSkillName());
+
+                        sendDataUpdate(emitter, msgId.getAndIncrement(),
+                            String.format("[%s] %s", skillPlan.getSkillName(), skillResult),
+                            "skill_result");
+
+                        log.info("Skill执行成功：{} -> {}", skillPlan.getSkillName(), skillResult);
+
+                    } catch (Exception e) {
+                        log.error("Skill执行失败：{}", skillPlan.getSkillName(), e);
+                        skillResults.put("skillError", "Skill执行失败：" + e.getMessage());
+                    }
+                } else {
+                    log.warn("未找到Skill：{}", skillPlan.getSkillName());
+                    skillResults.put("skillError", "未找到指定的Skill");
+                }
+            } else {
+                log.info("无需调用Skill：{}", skillPlan.getReasoning());
+                skillResults.put("skillResult", "未调用Skill");
+            }
+
+        } catch (Exception e) {
+            log.error("Skills阶段失败", e);
+            skillResults.put("skillError", "Skills分析失败：" + e.getMessage());
+        }
+
+        return skillResults;
     }
 
     /**
@@ -334,11 +461,6 @@ public class ReActLoopService {
         Map<String, Object> input = new HashMap<>();
         input.put("visionResult", previousResults.getOrDefault("visionResult", ""));
         parallelExperts.invoke(input);
-
-        // 这里简化处理，实际应从AgenticScope读取
-//        expertResults.put("safeNotice", "");
-//        expertResults.put("pesticide", "");
-//        expertResults.put("fieldManage", "");
 
         log.info("专家分析完成：{}", expertResults);
         return expertResults;
@@ -470,6 +592,19 @@ public class ReActLoopService {
             .build();
 
         Map<String, String> executionResults = (Map<String, String>) memory.get("executionResults");
+
+        // 构建完整的解决方案，包括Skill结果
+        StringBuilder solutionBuilder = new StringBuilder();
+
+        // 添加Skill结果（如果有）
+        if (executionResults.containsKey("skillResult") &&
+            !"未调用Skill".equals(executionResults.get("skillResult"))) {
+            String skillName = executionResults.getOrDefault("skillName", "Skill");
+            String skillResult = executionResults.get("skillResult");
+            solutionBuilder.append(String.format("%s结果：%s\n\n", skillName, skillResult));
+        }
+
+        // 添加专家分析结果
         String diseaseSolution = String.format(
             "安全注意：%s\n植保用药：%s\n田间管理：%s",
             executionResults.getOrDefault("safeNotice", ""),
@@ -477,7 +612,9 @@ public class ReActLoopService {
             executionResults.getOrDefault("fieldManage", "")
         );
 
-        return summaryAgent.generateSummary(diseaseSolution);
+        solutionBuilder.append(diseaseSolution);
+
+        return summaryAgent.generateSummary(solutionBuilder.toString());
     }
 
     /**

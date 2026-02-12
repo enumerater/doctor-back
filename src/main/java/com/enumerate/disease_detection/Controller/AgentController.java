@@ -118,7 +118,7 @@ public class AgentController {
         });
 
         // 执行ReAct循环
-        reActLoopService.executeReActLoop(emitter, prompt + " " + image);
+        reActLoopService.executeReActLoop(emitter, prompt + " " + image, userId, null);
 
         return emitter;
     }
