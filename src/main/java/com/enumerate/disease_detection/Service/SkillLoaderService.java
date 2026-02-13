@@ -81,6 +81,10 @@ public class SkillLoaderService {
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
 
+            // 按Skill名称去重，避免数据库中存在重复记录
+            Set<String> seenNames = new HashSet<>();
+            skillTools.removeIf(tool -> !seenNames.add(tool.getSkillDefinition().getName()));
+
             log.info("成功加载 {} 个Skills: {}", skillTools.size(),
                     skillTools.stream().map(tool -> tool.getSkillDefinition().getName()).collect(Collectors.toList()));
 
@@ -121,14 +125,16 @@ public class SkillLoaderService {
 
             // 尝试解析为JSON数组
             if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                return objectMapper.readValue(trimmed, new TypeReference<List<String>>() {
+                List<String> list = objectMapper.readValue(trimmed, new TypeReference<List<String>>() {
                 });
+                return list.stream().distinct().collect(Collectors.toList());
             }
 
             // 解析为逗号分隔的字符串
             return Arrays.stream(trimmed.split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
+                    .distinct()
                     .collect(Collectors.toList());
 
         } catch (Exception e) {

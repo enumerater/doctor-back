@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs basename:*)"
+      "Bash(xargs basename:*)",
+      "Bash(xargs:*)",
+      "Bash(mvn compile:*)"
     ]
   }
 }

@@ -20,7 +20,7 @@ import java.util.List;
 public class ExecutionPlanDTO {
 
     /**
-     * 任务类型：图像诊断 / 文本咨询 / 混合任务
+     * 任务类型：图像诊断 / 病害咨询 / 混合任务 / 一般咨询
      */
     private String taskType;
 

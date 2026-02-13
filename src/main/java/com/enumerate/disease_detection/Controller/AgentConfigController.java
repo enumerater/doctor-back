@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.enumerate.disease_detection.Common.Result;
 import com.enumerate.disease_detection.Local.UserContextHolder;
 import com.enumerate.disease_detection.Mapper.AgentConfigMapper;
+import com.enumerate.disease_detection.POJO.DTO.AgentConfigPODTO;
 import com.enumerate.disease_detection.POJO.PO.AgentConfigPO;
 import com.enumerate.disease_detection.POJO.VO.AgentConfigVO;
 import lombok.extern.slf4j.Slf4j;
@@ -45,8 +46,11 @@ public class AgentConfigController {
 
     @GetMapping("/{id}")
     @CrossOrigin
-    public Result<AgentConfigPO> get(@PathVariable("id") Long id) {
-        return Result.success(agentConfigMapper.selectById(id));
+    public Result<AgentConfigPODTO> get(@PathVariable("id") Long id) {
+        AgentConfigPODTO agentConfigPODTO = new AgentConfigPODTO();
+        AgentConfigPO agentConfigPO = agentConfigMapper.selectById(id);
+        BeanUtils.copyProperties(agentConfigPO, agentConfigPODTO);
+        return Result.success(agentConfigPODTO);
     }
 
     @PostMapping

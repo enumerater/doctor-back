@@ -53,6 +53,7 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\ModelInterfaces\RequestCategory.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\ModelInterfaces\SearchAssisant.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\ModelInterfaces\VisionAssisant.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\AgentConfigPODTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\AgentMessageDTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\AgentStep.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\ChatSessionDTO.java
@@ -63,6 +64,7 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\PicDTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\ReflectionDTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\RobotMessageData.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\SessionAgentConfigDTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\SkillCallPlanDTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\SkillDefinitionDTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\POJO\DTO\SkillsDTO.java

@@ -323,15 +323,21 @@ public class AgentWorkflowService {
         // 4. Skill调用判断与执行
         if (skillTools != null && !skillTools.isEmpty()) {
             sendStatusUpdate(emitter, msgId.getAndIncrement(), "分析是否需要调用Skills", "skill_analyzing");
-            Map<String, String> skillResults = executeSkillsPhase(model, results, skillTools, emitter, msgId);
+            Map<String, String> skillResults = executeSkillsPhase(model, results, skillTools, emitter, msgId, userInput);
             results.putAll(skillResults);
         }
 
-        // 5. 并行专家分析
-        sendStatusUpdate(emitter, msgId.getAndIncrement(), "专家团队分析中", "expert_analyzing");
-        Map<String, String> expertResults = executeParallelExperts(model, results);
-        results.putAll(expertResults);
+        // 5. 并行专家分析（仅在病害诊断相关任务时执行）
+        String taskType = plan.getTaskType();
+        boolean isDiagnosisTask = taskType != null &&
+            (taskType.contains("诊断") || taskType.contains("病害") || taskType.contains("混合"));
+        if (isDiagnosisTask) {
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "专家团队分析中", "expert_analyzing");
+            Map<String, String> expertResults = executeParallelExperts(model, results);
+            results.putAll(expertResults);
+        }
 
+        results.put("taskType", taskType != null ? taskType : "一般咨询");
         return results;
     }
 
@@ -343,7 +349,8 @@ public class AgentWorkflowService {
         Map<String, String> previousResults,
         List<com.enumerate.disease_detection.Tools.DynamicSkillTool> skillTools,
         SseEmitter emitter,
-        AtomicInteger msgId
+        AtomicInteger msgId,
+        String originalUserInput
     ) throws IOException {
         Map<String, String> skillResults = new HashMap<>();
 
@@ -356,14 +363,15 @@ public class AgentWorkflowService {
                 .build();
 
             String context = String.format(
-                "解析结果: %s\n视觉识别结果: %s",
+                "用户原始输入: %s\n解析结果: %s\n视觉识别结果: %s",
+                originalUserInput,
                 previousResults.getOrDefault("parsedInput", ""),
                 previousResults.getOrDefault("visionResult", "")
             );
 
             String skillPlanJson = skillAgent.analyzeSkillNeed(
                 availableSkillsDesc,
-                previousResults.getOrDefault("parsedInput", ""),
+                originalUserInput,
                 context
             );
 
@@ -466,10 +474,14 @@ public class AgentWorkflowService {
                 .chatModel(model)
                 .build();
 
+            String taskType = plan.getTaskType();
+            String expectedOutput = taskType != null && (taskType.contains("诊断") || taskType.contains("病害"))
+                ? "完整的病害诊断和解决方案"
+                : "针对用户问题的完整回答";
             String observationJson = observer.observe(
                 "完整执行流程",
                 executionResults.toString(),
-                "完整的病害诊断和解决方案"
+                expectedOutput
             );
 
             log.info("观察结果（原始）: {}", observationJson);
@@ -570,24 +582,38 @@ public class AgentWorkflowService {
             .build();
 
         Map<String, String> executionResults = (Map<String, String>) memory.get("executionResults");
+        String userInput = (String) memory.get("userInput");
 
         StringBuilder solutionBuilder = new StringBuilder();
+        solutionBuilder.append("用户原始问题: ").append(userInput).append("\n\n");
 
-        if (executionResults.containsKey("skillResult") &&
-            !"未调用Skill".equals(executionResults.get("skillResult"))) {
+        // Skill查询结果
+        boolean hasSkillResult = executionResults.containsKey("skillResult") &&
+            !"未调用Skill".equals(executionResults.get("skillResult"));
+        if (hasSkillResult) {
             String skillName = executionResults.getOrDefault("skillName", "Skill");
             String skillResult = executionResults.get("skillResult");
-            solutionBuilder.append(String.format("%s结果: %s\n\n", skillName, skillResult));
+            solutionBuilder.append(String.format("Skill查询结果[%s]: %s\n\n", skillName, skillResult));
         }
 
-        String diseaseSolution = String.format(
-            "安全注意: %s\n植保用药: %s\n田间管理: %s",
-            executionResults.getOrDefault("safeNotice", ""),
-            executionResults.getOrDefault("pesticide", ""),
-            executionResults.getOrDefault("fieldManage", "")
-        );
+        // 专家分析结果（仅病害诊断任务会有）
+        boolean hasExpertResults = executionResults.containsKey("safeNotice") ||
+            executionResults.containsKey("pesticide") ||
+            executionResults.containsKey("fieldManage");
+        if (hasExpertResults) {
+            String diseaseSolution = String.format(
+                "安全注意: %s\n植保用药: %s\n田间管理: %s",
+                executionResults.getOrDefault("safeNotice", ""),
+                executionResults.getOrDefault("pesticide", ""),
+                executionResults.getOrDefault("fieldManage", "")
+            );
+            solutionBuilder.append(diseaseSolution);
+        }
 
-        solutionBuilder.append(diseaseSolution);
+        // 如果既没有Skill结果也没有专家分析，让LLM直接回答
+        if (!hasSkillResult && !hasExpertResults) {
+            solutionBuilder.append("请根据你的农业专业知识直接回答用户的问题。");
+        }
 
         return summaryAgent.generateSummary(solutionBuilder.toString());
     }
