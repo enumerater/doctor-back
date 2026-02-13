@@ -31,6 +31,16 @@ public class DynamicSkillTool {
             log.info("执行Skill: {} | 参数: {}", skillDefinition.getName(), params);
 
             SkillDefinitionDTO.ApiEndpointConfig apiConfig = skillDefinition.getApiConfig();
+            if (apiConfig == null) {
+                throw new IllegalStateException(
+                    String.format("Skill [%s] 缺少API配置，请在数据库skills表的params字段中配置endpoint、method等信息",
+                        skillDefinition.getName()));
+            }
+            if (apiConfig.getEndpoint() == null || apiConfig.getMethod() == null) {
+                throw new IllegalStateException(
+                    String.format("Skill [%s] 的API配置不完整，endpoint或method为空", skillDefinition.getName()));
+            }
+
             int timeout = apiConfig.getTimeout() != null ? apiConfig.getTimeout() : 30;
 
             String response;

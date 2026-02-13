@@ -173,6 +173,8 @@ public class SkillLoaderService {
                         SkillDefinitionDTO.ApiEndpointConfig.class
                 );
                 definition.setApiConfig(apiConfig);
+            } else {
+                log.warn("Skill [{}] 的params字段为空，该Skill将无法正常执行API调用", skillsPO.getName());
             }
 
             return new DynamicSkillTool(definition);
