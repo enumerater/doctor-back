@@ -14,6 +14,7 @@ import com.enumerate.disease_detection.POJO.VO.AgentConfigVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -55,20 +56,27 @@ public class AgentConfigController {
 
     @PostMapping
     @CrossOrigin
-    public Result<AgentConfigPO> save(@RequestBody AgentConfigPO agentConfigPO) {
+    public Result<AgentConfigPODTO> save(@RequestBody AgentConfigPO agentConfigPO) {
         log.info("保存配置{}", agentConfigPO);
         agentConfigPO.setUserId(UserContextHolder.getUserId());
         agentConfigMapper.insert(agentConfigPO);
-        return Result.success(agentConfigPO);
+
+        AgentConfigPODTO agentConfigPODTO = new AgentConfigPODTO();
+        BeanUtils.copyProperties(agentConfigPO, agentConfigPODTO);
+
+        return Result.success(agentConfigPODTO);
     }
 
     @PutMapping("/{id}")
     @CrossOrigin
-    public Result<AgentConfigPO> update(@PathVariable("id") Long id, @RequestBody AgentConfigPO agentConfigPO) {
+    public Result<AgentConfigPODTO> update(@PathVariable("id") Long id, @RequestBody AgentConfigPO agentConfigPO) {
         log.info("更新配置{} {}", agentConfigPO,id);
         agentConfigPO.setId(id);
         agentConfigMapper.update(agentConfigPO, new QueryWrapper<AgentConfigPO>().eq("id", id));
-        return Result.success(agentConfigPO);
+
+        AgentConfigPODTO agentConfigPODTO = new AgentConfigPODTO();
+        BeanUtils.copyProperties(agentConfigPO, agentConfigPODTO);
+        return Result.success(agentConfigPODTO);
     }
 
     @DeleteMapping("/{id}")
