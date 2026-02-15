@@ -70,6 +70,7 @@ public class DashboardController {
     public Result<WeatherVO> getWeather(
             @RequestParam String regionCode,
             @RequestParam(required = false) String timeRange) {
+        log.info("regionCode: {}, timeRange: {}", regionCode, timeRange);
         return Result.success(dashboardService.getWeather(regionCode, timeRange));
     }
 
