@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.enumerate.disease_detection.Mapper.CropsMapper">
+
+    <select id="getCrops" resultType="com.enumerate.disease_detection.POJO.VO.CropListVO">
+        SELECT
+            c.name AS name,        -- 映射CropListVO的name字段（农作物名称）
+            c.icon AS icon,         -- 映射CropListVO的icon字段（图标URL）
+            COUNT(d.id) AS diseaseCount  -- 映射diseaseCount（病害数量）
+        FROM
+            crops c
+                LEFT JOIN
+            diseases d ON c.name = d.crop_name  -- 根据农作物名称关联病害表
+        GROUP BY
+            c.id, c.name, c.icon   -- 按农作物分组
+        ORDER BY
+            c.name ASC                      -- 按名称升序排列
+
+    </select>
+</mapper>
