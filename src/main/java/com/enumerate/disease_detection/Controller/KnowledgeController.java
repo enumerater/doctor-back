@@ -35,10 +35,12 @@ public class KnowledgeController {
 
     @GetMapping("/diseases")
     public Result<DiseasesPageResult> getDiseasesByCrop(
-            @RequestParam String cropName,
+            @RequestParam(required = false) String cropName,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer pageSize) {
-        DiseasesPageResult res = knowledgeService.getDiseasesByCrop(cropName, page, pageSize);
+        DiseasesPageResult res = knowledgeService.getDiseasesByCrop(cropName, page, pageSize, keyword, category);
 
         return Result.success(res);
     }

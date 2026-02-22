@@ -29,7 +29,8 @@ public class KnowledgeService {
         return cropsMapper.getCrops();
     }
 
-    public DiseasesPageResult getDiseasesByCrop(String cropName, Integer page, Integer pageSize) {
+    // 假设你的 mapper 和返回结果类已经正确引入
+    public DiseasesPageResult getDiseasesByCrop(String cropName, Integer page, Integer pageSize, String keyword, String category) {
         // 1. 参数校验：处理空值和非法值，设置默认分页参数
         if (page == null || page < 1) {
             page = 1; // 页码默认从1开始
@@ -38,23 +39,29 @@ public class KnowledgeService {
             pageSize = 20; // 每页条数默认20，限制最大100条避免性能问题
         }
 
-        // 2. 构建分页参数（修正拼写错误pageParm -> pageParam）
+        // 2. 构建分页参数
         Page<DiseasesPO> pageParam = new Page<>(page, pageSize);
 
-        // 3. 构建查询条件：eq("数据库字段名", 值)，注意字段名要和DiseasesPO的映射一致
-        // 假设DiseasesPO中作物名称的字段是cropName，数据库中是crop_name（MyBatis-Plus会自动下划线转驼峰）
-        QueryWrapper<DiseasesPO> queryWrapper = new QueryWrapper<DiseasesPO>()
-                .eq("crop_name", cropName); // 关键修正：将name改为crop_name（作物名称字段）
+        // 3. 构建查询条件（合并冗余逻辑）
+        QueryWrapper<DiseasesPO> queryWrapper = new QueryWrapper<>();
+        // 仅当 cropName 非空时才添加作物名称的查询条件
+        if (StringUtils.hasText(cropName)) {
+            queryWrapper.eq("crop_name", cropName);
+        }
+        if (StringUtils.hasText(keyword)) {
+            queryWrapper.like("name", keyword);
+        }
+        if (StringUtils.hasText(category)) {
+            queryWrapper.eq("category", category);
+        }
 
-        // 4. 执行分页查询（变量名page1改为diseasePage，语义更清晰）
+        // 4. 执行分页查询
         Page<DiseasesPO> diseasePage = diseasesMapper.selectPage(pageParam, queryWrapper);
 
-
-
-        // 5. 封装返回结果：从分页对象中获取列表和总数
+        // 5. 封装返回结果（关键修复：总条数使用 getTotal()）
         DiseasesPageResult result = new DiseasesPageResult();
-        result.setList(diseasePage.getRecords()); // 获取分页后的列表数据
-        result.setTotal(diseasePage.getRecords().size()); // 获取符合条件的总条数
+        result.setList(diseasePage.getRecords()); // 当前页的数据列表
+        result.setTotal((int) diseasePage.getTotal());   // 符合条件的总记录数（核心修复点）
 
         return result;
     }

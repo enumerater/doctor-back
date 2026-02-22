@@ -1,0 +1,28 @@
+package com.enumerate.disease_detection.POJO.PO;
+
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@TableName("notification")
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class NotificationPO {
+    private Long id;
+    private Long userId;
+    private String type;
+    private String title;
+    private String content;
+    @TableField("is_read")
+    private Boolean read;
+    private String link;
+
+    @TableField(fill = FieldFill.INSERT)
+    private String createdAt;
+}

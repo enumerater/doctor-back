@@ -3,7 +3,10 @@
     "allow": [
       "Bash(xargs basename:*)",
       "Bash(xargs:*)",
-      "Bash(mvn compile:*)"
+      "Bash(mvn compile:*)",
+      "Bash(find:*)",
+      "Bash(tail:*)",
+      "Bash(ls:*)"
     ]
   }
 }
