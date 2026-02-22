@@ -12,7 +12,7 @@ public interface VisionAssisant {
 
 
 
-    String chat(UserMessage userMessage);
+    String chat(String userMessage);
 
 
 }
