@@ -51,10 +51,10 @@ public class DiagnosisService {
 
     public DiagnosisStatusVO getDiagnosisStatus() {
         // 1. 统计总数、患病数、健康数
-        Map<String, Long> statusMap = diagnosisMapper.countTotalStatus();
-        Long total = statusMap.get("total");
-        Long diseased = statusMap.get("diseased");
-        Long healthy = statusMap.get("healthy");
+        Map<String, Object> statusMap = diagnosisMapper.countTotalStatus();
+        Long total = ((Number) statusMap.get("total")).longValue();
+        Long diseased = ((Number) statusMap.get("diseased")).longValue();
+        Long healthy = ((Number) statusMap.get("healthy")).longValue();
 
         // 2. 查询作物分布
         List<CropDistribution> cropDistribution = diagnosisMapper.selectCropDistribution();

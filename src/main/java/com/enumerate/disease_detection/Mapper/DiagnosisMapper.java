@@ -20,7 +20,7 @@ public interface DiagnosisMapper extends BaseMapper<DiagnosisPO> {
             "SUM(CASE WHEN has_disease = 1 THEN 1 ELSE 0 END) AS diseased, " +
             "SUM(CASE WHEN has_disease = 0 THEN 1 ELSE 0 END) AS healthy " +
             "FROM diagnosis")
-    Map<String, Long> countTotalStatus();
+    Map<String, Object> countTotalStatus();
 
     /**
      * 查询作物分布（按crop_type分组统计）

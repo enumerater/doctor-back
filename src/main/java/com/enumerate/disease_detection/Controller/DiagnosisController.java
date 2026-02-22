@@ -79,7 +79,8 @@ public class DiagnosisController {
     }
 
     @PutMapping("/{id}")
-    public Result<DiagnosisPO> update(@PathVariable String id,@RequestBody DiagnosisPutDTO diagnosisPutDTO) {
+    public Result<DiagnosisPO> update(@PathVariable String id, @RequestBody DiagnosisPutDTO diagnosisPutDTO) {
+        log.info("update {} {} ", id ,diagnosisPutDTO);
         DiagnosisPO diagnosisPO = diagnosisMapper.selectById(id);
         diagnosisPO.setNotes(diagnosisPutDTO.getNotes());
         diagnosisMapper.updateById(diagnosisPO);
