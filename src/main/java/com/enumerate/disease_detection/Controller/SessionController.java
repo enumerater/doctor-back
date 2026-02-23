@@ -6,7 +6,7 @@ import com.enumerate.disease_detection.Common.Result;
 import com.enumerate.disease_detection.Local.UserContextHolder;
 import com.enumerate.disease_detection.Mapper.SessionMapper;
 import com.enumerate.disease_detection.POJO.DTO.ChatSessionDTO;
-import com.enumerate.disease_detection.POJO.DTO.SessionAgentConfigDTO;
+
 import com.enumerate.disease_detection.POJO.PO.ChatSessionPO;
 import com.enumerate.disease_detection.POJO.VO.SessionVO;
 import com.enumerate.disease_detection.Tools.TitleTool;
@@ -117,16 +117,4 @@ public class SessionController {
         return Result.success("更新成功");
     }
 
-    @PutMapping("/{sessionId}/agentConfig")
-    @CrossOrigin
-    public Result<String> updateAgentConfig(@PathVariable("sessionId") String sessionId,  @RequestBody SessionAgentConfigDTO sessionAgentConfigDTO) {
-        log.info("sessionId: {}, configId: {}", sessionId, sessionAgentConfigDTO.getConfigId());
-
-        UpdateWrapper<ChatSessionPO> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("session_id", sessionId);
-        updateWrapper.set("agent_config_id", sessionAgentConfigDTO.getConfigId());
-        sessionMapper.update(null, updateWrapper);
-
-        return Result.success("更新成功");
-    }
 }

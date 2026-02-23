@@ -45,6 +45,11 @@ public class ExecutionPlanDTO {
     private Integer maxIterations;
 
     /**
+     * 需要的Tool名称列表
+     */
+    private List<String> toolsNeeded;
+
+    /**
      * 备用策略
      */
     private String fallbackStrategy;

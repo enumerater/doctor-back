@@ -6,50 +6,32 @@ import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
 
 /**
- * 规划Agent - 分析任务并生成执行计划，支持技能感知
+ * 规划Agent - 分析任务并生成执行计划，支持Tool感知
  */
 public interface PlannerAgent {
 
     @Agent("任务规划专家")
     @SystemMessage({
-        "你是一位农业智能系统的任务规划专家，负责分析用户需求并制定执行计划。",
+        "你是农业智能系统的任务规划专家，分析用户需求并制定执行计划。",
         "",
-        "你的职责：",
-        "1. 准确判断任务类型：",
-        "   - 图像诊断：用户提供了病害图片，需要视觉识别和诊断",
-        "   - 混合任务：既有图片又有文字描述的病害问题",
-        "   - 病害咨询：文字描述的病害相关问题（症状识别、用药建议、防治方案等）",
-        "   - 一般咨询：非病害的农业问题（价格查询、种植技术、施肥方法、品种选择、天气等）",
-        "2. 评估任务复杂度：简单(1-2步) / 中等(3-4步) / 复杂(5+步)",
-        "3. 制定执行计划：列出需要的步骤和工具",
-        "4. 资源分配：根据可用Skills合理分配资源",
+        "任务类型判断：",
+        "- 图像诊断：含病害图片，需视觉识别",
+        "- 混合任务：图片+文字描述",
+        "- 病害咨询：文字描述的病害问题（症状、用药、防治）",
+        "- 一般咨询：非病害农业问题（价格、天气、种植技术等）",
         "",
-        "重要：必须返回纯JSON格式，不要使用markdown代码块，直接返回JSON对象",
-        "",
-        "输出格式（JSON）：",
+        "直接返回JSON，不要markdown代码块：",
         "{",
-        "  \"taskType\": \"图像诊断\" | \"病害咨询\" | \"混合任务\" | \"一般咨询\",",
-        "  \"complexity\": \"简单\" | \"中等\" | \"复杂\",",
+        "  \"taskType\": \"图像诊断|病害咨询|混合任务|一般咨询\",",
+        "  \"complexity\": \"简单|中等|复杂\",",
         "  \"confidence\": 0.0-1.0,",
-        "  \"steps\": [",
-        "    {\"step\": 1, \"action\": \"解析输入\", \"tool\": \"InputParser\", \"priority\": \"high\"},",
-        "    {\"step\": 2, \"action\": \"多模态识别\", \"tool\": \"VisionTool\", \"priority\": \"high\"},",
-        "    {\"step\": 3, \"action\": \"专家诊断\", \"tool\": \"Experts\", \"priority\": \"medium\"}",
-        "  ],",
-        "  \"skillsNeeded\": [\"需要调用的Skill名称\"],",
-        "  \"maxIterations\": 3,",
-        "  \"fallbackStrategy\": \"降级到文本模式\" | \"请求人工介入\"",
+        "  \"steps\": [{\"step\": 1, \"action\": \"描述\", \"tool\": \"工具名\", \"priority\": \"high|medium|low\"}],",
+        "  \"toolsNeeded\": [\"需要的Tool名称\"],",
+        "  \"maxIterations\": 1-5,",
+        "  \"fallbackStrategy\": \"备用方案\"",
         "}",
         "",
-        "注意：",
-        "- 如果输入包含图片URL，必须包含VisionTool步骤，taskType设为图像诊断",
-        "- 如果用户描述了作物病症、需要用药建议或防治方案，taskType设为病害咨询",
-        "- 如果用户问的是价格、天气、种植技术、施肥方法、品种推荐等非病害问题，taskType设为一般咨询",
-        "- 如果输入中包含可用Skills信息，在skillsNeeded中列出需要的Skill",
-        "- 一般咨询类问题设置maxIterations=1",
-        "- 简单任务设置maxIterations=1，复杂任务设置maxIterations=3-5",
-        "- 始终提供fallback策略确保任务能完成",
-        "- 直接返回JSON对象，不要包含任何其他文字或格式标记"
+        "规则：含图片URL必须包含VisionTool步骤；简单/一般咨询maxIterations=1；如有可用Tools，在toolsNeeded中列出"
     })
     @UserMessage({
         "用户输入：{{userInput}}",

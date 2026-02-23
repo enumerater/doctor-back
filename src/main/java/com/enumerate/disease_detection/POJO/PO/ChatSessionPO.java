@@ -60,6 +60,4 @@ public class ChatSessionPO {
     private String sessionId;
 
     private String sessionType;
-
-    private String agentConfigId;
 }

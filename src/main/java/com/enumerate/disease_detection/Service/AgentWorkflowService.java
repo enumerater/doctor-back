@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>采用 ReAct (Reasoning + Acting) 架构，将推理与行动交替进行，
  * 实现动态规划、质量评估和自适应决策。</p>
  *
- * <p>工作流程：用户输入 -> 加载Skills -> 规划(Plan) -> [执行(Act) -> 观察(Observe)
+ * <p>工作流程：用户输入 -> 加载Tools -> 规划(Plan) -> [执行(Act) -> 观察(Observe)
  * -> 反思(Reflect) -> 决策(Decide)] x N -> 综合报告</p>
  *
  * <p>参考文献：Yao et al., "ReAct: Synergizing Reasoning and Acting in Language Models", ICLR 2023</p>
@@ -43,7 +43,7 @@ public class AgentWorkflowService {
     private VisioTool visioTool;
 
     @Autowired
-    private SkillLoaderService skillLoaderService;
+    private ToolLoaderService toolLoaderService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -85,42 +85,41 @@ public class AgentWorkflowService {
      * @param emitter SSE事件发射器
      * @param input 用户输入（文本+图片URL）
      * @param userId 用户ID
-     * @param agentConfigId Agent配置ID（可选）
      */
     @Async
-    public void execute(SseEmitter emitter, String input, Long userId, Long agentConfigId) {
+    public void execute(SseEmitter emitter, String input, Long userId) {
         AtomicInteger msgId = new AtomicInteger(1);
         OpenAiChatModel baseModel = mainModel.tongYiModel();
 
         Map<String, Object> workingMemory = new HashMap<>();
         workingMemory.put("userInput", input);
 
-        // 加载用户的Skills
-        List<com.enumerate.disease_detection.Tools.DynamicSkillTool> skillTools = Collections.emptyList();
+        // 加载所有启用的Tools
+        List<com.enumerate.disease_detection.Tools.DynamicTool> tools = Collections.emptyList();
         try {
-            sendStatusUpdate(emitter, msgId.getAndIncrement(), "加载用户Skills配置", "loading_skills");
-            skillTools = skillLoaderService.loadSkillsForUser(userId, agentConfigId);
-            workingMemory.put("availableSkills", skillTools);
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "加载Tools配置", "loading_tools");
+            tools = toolLoaderService.loadAllTools();
+            workingMemory.put("availableTools", tools);
 
-            if (!skillTools.isEmpty()) {
-                String skillsInfo = skillTools.stream()
-                    .map(tool -> tool.getSkillDefinition().getName())
+            if (!tools.isEmpty()) {
+                String toolsInfo = tools.stream()
+                    .map(tool -> tool.getToolDefinition().getName())
                     .collect(java.util.stream.Collectors.joining("、"));
                 sendDataUpdate(emitter, msgId.getAndIncrement(),
-                    String.format("已加载 %d 个Skills: %s", skillTools.size(), skillsInfo),
-                    "skills_loaded");
-                log.info("成功加载 {} 个Skills", skillTools.size());
+                    String.format("已加载 %d 个Tools: %s", tools.size(), toolsInfo),
+                    "tools_loaded");
+                log.info("成功加载 {} 个Tools", tools.size());
             } else {
-                log.info("当前配置未启用任何Skill");
+                log.info("当前未启用任何Tool");
             }
         } catch (Exception e) {
-            log.error("加载Skills失败，继续执行", e);
+            log.error("加载Tools失败，继续执行", e);
         }
 
         try {
             // ========== 阶段1: 规划(Plan) ==========
             sendStatusUpdate(emitter, msgId.getAndIncrement(), "正在分析任务并制定执行计划", "planning");
-            ExecutionPlanDTO plan = executePlanningPhase(baseModel, input, skillTools);
+            ExecutionPlanDTO plan = executePlanningPhase(baseModel, input, tools);
             workingMemory.put("plan", plan);
 
             sendDataUpdate(emitter, msgId.getAndIncrement(),
@@ -143,7 +142,7 @@ public class AgentWorkflowService {
 
                 // 2.1 执行(Act)
                 sendStatusUpdate(emitter, msgId.getAndIncrement(), "执行任务步骤", "acting");
-                Map<String, String> executionResults = executeActingPhase(baseModel, plan, workingMemory, emitter, msgId, skillTools);
+                Map<String, String> executionResults = executeActingPhase(baseModel, plan, workingMemory, emitter, msgId, tools);
                 workingMemory.put("executionResults", executionResults);
 
                 // 2.2 观察(Observe)
@@ -234,10 +233,10 @@ public class AgentWorkflowService {
     }
 
     /**
-     * 阶段1: 规划(Plan) - 支持技能感知
+     * 阶段1: 规划(Plan) - 支持Tool感知
      */
     private ExecutionPlanDTO executePlanningPhase(OpenAiChatModel model, String input,
-            List<com.enumerate.disease_detection.Tools.DynamicSkillTool> skillTools) {
+            List<com.enumerate.disease_detection.Tools.DynamicTool> tools) {
         try {
             log.info("========== 规划阶段 ==========");
 
@@ -247,9 +246,9 @@ public class AgentWorkflowService {
                 .build();
 
             String planInput = input;
-            if (skillTools != null && !skillTools.isEmpty()) {
-                String skillsDescription = skillLoaderService.generateSkillsPrompt(skillTools);
-                planInput = input + "\n\n可用Skills:\n" + skillsDescription;
+            if (tools != null && !tools.isEmpty()) {
+                String toolsDescription = toolLoaderService.generateToolsPrompt(tools);
+                planInput = input + "\n\n可用Tools:\n" + toolsDescription;
             }
 
             String planJson = plannerAgent.plan(planInput);
@@ -278,7 +277,7 @@ public class AgentWorkflowService {
         Map<String, Object> memory,
         SseEmitter emitter,
         AtomicInteger msgId,
-        List<com.enumerate.disease_detection.Tools.DynamicSkillTool> skillTools
+        List<com.enumerate.disease_detection.Tools.DynamicTool> tools
     ) throws IOException {
         log.info("========== 执行阶段 ==========");
         Map<String, String> results = new HashMap<>();
@@ -320,11 +319,11 @@ public class AgentWorkflowService {
             results.put("visionResult", "未发现图像，使用文本分析");
         }
 
-        // 4. Skill调用判断与执行
-        if (skillTools != null && !skillTools.isEmpty()) {
-            sendStatusUpdate(emitter, msgId.getAndIncrement(), "分析是否需要调用Skills", "skill_analyzing");
-            Map<String, String> skillResults = executeSkillsPhase(model, results, skillTools, emitter, msgId, userInput);
-            results.putAll(skillResults);
+        // 4. Tool调用判断与执行
+        if (tools != null && !tools.isEmpty()) {
+            sendStatusUpdate(emitter, msgId.getAndIncrement(), "分析是否需要调用Tools", "tool_analyzing");
+            Map<String, String> toolResults = executeToolsPhase(model, results, tools, emitter, msgId, userInput);
+            results.putAll(toolResults);
         }
 
         // 5. 并行专家分析（仅在病害诊断相关任务时执行）
@@ -342,23 +341,23 @@ public class AgentWorkflowService {
     }
 
     /**
-     * Skills执行阶段
+     * Tools执行阶段
      */
-    private Map<String, String> executeSkillsPhase(
+    private Map<String, String> executeToolsPhase(
         OpenAiChatModel model,
         Map<String, String> previousResults,
-        List<com.enumerate.disease_detection.Tools.DynamicSkillTool> skillTools,
+        List<com.enumerate.disease_detection.Tools.DynamicTool> tools,
         SseEmitter emitter,
         AtomicInteger msgId,
         String originalUserInput
     ) throws IOException {
-        Map<String, String> skillResults = new HashMap<>();
+        Map<String, String> toolResults = new HashMap<>();
 
         try {
-            String availableSkillsDesc = skillLoaderService.generateSkillsPrompt(skillTools);
+            String availableToolsDesc = toolLoaderService.generateToolsPrompt(tools);
 
-            SkillAgent skillAgent = AgenticServices
-                .agentBuilder(SkillAgent.class)
+            ToolAgent toolAgent = AgenticServices
+                .agentBuilder(ToolAgent.class)
                 .chatModel(model)
                 .build();
 
@@ -369,63 +368,63 @@ public class AgentWorkflowService {
                 previousResults.getOrDefault("visionResult", "")
             );
 
-            String skillPlanJson = skillAgent.analyzeSkillNeed(
-                availableSkillsDesc,
+            String toolPlanJson = toolAgent.analyzeSkillNeed(
+                availableToolsDesc,
                 originalUserInput,
                 context
             );
 
-            log.info("Skill调用计划（原始）: {}", skillPlanJson);
+            log.info("Tool调用计划（原始）: {}", toolPlanJson);
 
-            String cleanedJson = cleanJsonString(skillPlanJson);
-            SkillCallPlanDTO skillPlan = objectMapper.readValue(cleanedJson, SkillCallPlanDTO.class);
+            String cleanedJson = cleanJsonString(toolPlanJson);
+            ToolCallPlanDTO toolPlan = objectMapper.readValue(cleanedJson, ToolCallPlanDTO.class);
 
-            log.info("Skill调用计划: needSkill={}, skillName={}, reasoning={}",
-                skillPlan.getNeedSkill(), skillPlan.getSkillName(), skillPlan.getReasoning());
+            log.info("Tool调用计划: needSkill={}, skillName={}, reasoning={}",
+                toolPlan.getNeedSkill(), toolPlan.getSkillName(), toolPlan.getReasoning());
 
-            skillResults.put("skillAnalysis", skillPlan.getReasoning());
+            toolResults.put("toolAnalysis", toolPlan.getReasoning());
 
-            if (Boolean.TRUE.equals(skillPlan.getNeedSkill()) && skillPlan.getSkillName() != null) {
-                com.enumerate.disease_detection.Tools.DynamicSkillTool targetSkill = skillTools.stream()
-                    .filter(tool -> tool.getSkillDefinition().getName().equals(skillPlan.getSkillName()))
+            if (Boolean.TRUE.equals(toolPlan.getNeedSkill()) && toolPlan.getSkillName() != null) {
+                com.enumerate.disease_detection.Tools.DynamicTool targetTool = tools.stream()
+                    .filter(tool -> tool.getToolDefinition().getName().equals(toolPlan.getSkillName()))
                     .findFirst()
                     .orElse(null);
 
-                if (targetSkill != null) {
+                if (targetTool != null) {
                     sendStatusUpdate(emitter, msgId.getAndIncrement(),
-                        String.format("正在调用Skill: %s", skillPlan.getSkillName()),
-                        "skill_executing");
+                        String.format("正在调用Tool: %s", toolPlan.getSkillName()),
+                        "tool_executing");
 
                     try {
-                        String skillResult = targetSkill.execute(skillPlan.getParameters());
-                        skillResults.put("skillResult", skillResult);
-                        skillResults.put("skillName", skillPlan.getSkillName());
+                        String toolResult = targetTool.execute(toolPlan.getParameters());
+                        toolResults.put("toolResult", toolResult);
+                        toolResults.put("toolName", toolPlan.getSkillName());
 
                         sendDataUpdate(emitter, msgId.getAndIncrement(),
-                            String.format("[%s] %s", skillPlan.getSkillName(), skillResult),
-                            "skill_result");
+                            String.format("[%s] %s", toolPlan.getSkillName(), toolResult),
+                            "tool_result");
 
-                        log.info("Skill执行成功: {} -> {}", skillPlan.getSkillName(), skillResult);
+                        log.info("Tool执行成功: {} -> {}", toolPlan.getSkillName(), toolResult);
 
                     } catch (Exception e) {
-                        log.error("Skill执行失败: {}", skillPlan.getSkillName(), e);
-                        skillResults.put("skillError", "Skill执行失败: " + e.getMessage());
+                        log.error("Tool执行失败: {}", toolPlan.getSkillName(), e);
+                        toolResults.put("toolError", "Tool执行失败: " + e.getMessage());
                     }
                 } else {
-                    log.warn("未找到Skill: {}", skillPlan.getSkillName());
-                    skillResults.put("skillError", "未找到指定的Skill");
+                    log.warn("未找到Tool: {}", toolPlan.getSkillName());
+                    toolResults.put("toolError", "未找到指定的Tool");
                 }
             } else {
-                log.info("无需调用Skill: {}", skillPlan.getReasoning());
-                skillResults.put("skillResult", "未调用Skill");
+                log.info("无需调用Tool: {}", toolPlan.getReasoning());
+                toolResults.put("toolResult", "未调用Tool");
             }
 
         } catch (Exception e) {
-            log.error("Skills阶段失败", e);
-            skillResults.put("skillError", "Skills分析失败: " + e.getMessage());
+            log.error("Tools阶段失败", e);
+            toolResults.put("toolError", "Tools分析失败: " + e.getMessage());
         }
 
-        return skillResults;
+        return toolResults;
     }
 
     /**
@@ -587,13 +586,13 @@ public class AgentWorkflowService {
         StringBuilder solutionBuilder = new StringBuilder();
         solutionBuilder.append("用户原始问题: ").append(userInput).append("\n\n");
 
-        // Skill查询结果
-        boolean hasSkillResult = executionResults.containsKey("skillResult") &&
-            !"未调用Skill".equals(executionResults.get("skillResult"));
-        if (hasSkillResult) {
-            String skillName = executionResults.getOrDefault("skillName", "Skill");
-            String skillResult = executionResults.get("skillResult");
-            solutionBuilder.append(String.format("Skill查询结果[%s]: %s\n\n", skillName, skillResult));
+        // Tool查询结果
+        boolean hasToolResult = executionResults.containsKey("toolResult") &&
+            !"未调用Tool".equals(executionResults.get("toolResult"));
+        if (hasToolResult) {
+            String toolName = executionResults.getOrDefault("toolName", "Tool");
+            String toolResult = executionResults.get("toolResult");
+            solutionBuilder.append(String.format("Tool查询结果[%s]: %s\n\n", toolName, toolResult));
         }
 
         // 专家分析结果（仅病害诊断任务会有）
@@ -610,8 +609,8 @@ public class AgentWorkflowService {
             solutionBuilder.append(diseaseSolution);
         }
 
-        // 如果既没有Skill结果也没有专家分析，让LLM直接回答
-        if (!hasSkillResult && !hasExpertResults) {
+        // 如果既没有Tool结果也没有专家分析，让LLM直接回答
+        if (!hasToolResult && !hasExpertResults) {
             solutionBuilder.append("请根据你的农业专业知识直接回答用户的问题。");
         }
 

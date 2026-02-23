@@ -20,17 +20,6 @@ public class AgentController {
     @Autowired
     private AgentWorkflowService agentWorkflowService;
 
-    /**
-     * Agent工作流端点 - 基于ReAct认知循环
-     *
-     * @param response HTTP响应
-     * @param prompt 用户输入文本
-     * @param image 图片URL
-     * @param userId 用户ID
-     * @param sessionId 会话ID
-     * @param agentConfigId Agent配置ID（可选，不传则使用用户默认配置）
-     * @return SSE流式响应
-     */
     @GetMapping("/agriculture-agent")
     @CrossOrigin(
             origins = "http://localhost:5173",
@@ -43,8 +32,7 @@ public class AgentController {
             @RequestParam String prompt,
             @RequestParam String image,
             @RequestParam Long userId,
-            @RequestParam Long sessionId,
-            @RequestParam(required = false) Long agentConfigId
+            @RequestParam Long sessionId
     ) throws IOException {
         log.info("Agent工作流开始处理");
         log.info("prompt: {} | image: {}", prompt, image);
@@ -66,7 +54,7 @@ public class AgentController {
             emitter.completeWithError(e);
         });
 
-        agentWorkflowService.execute(emitter, prompt + " " + image, userId, agentConfigId);
+        agentWorkflowService.execute(emitter, prompt + " " + image, userId);
 
         return emitter;
     }
