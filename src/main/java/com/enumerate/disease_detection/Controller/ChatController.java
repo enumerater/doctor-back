@@ -2,7 +2,6 @@ package com.enumerate.disease_detection.Controller;
 
 
 import com.enumerate.disease_detection.Service.ChatService;
-import com.enumerate.disease_detection.Tools.TitleTool;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -90,12 +89,4 @@ public class ChatController {
     }
 
 
-    @Autowired
-    private TitleTool titleTool;
-
-    @GetMapping("/title")
-    @CrossOrigin
-    public String title(@RequestParam String prompt) {
-        return titleTool.summarizeConversationTopic(prompt);
-    }
 }

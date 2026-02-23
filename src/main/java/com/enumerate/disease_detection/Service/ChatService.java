@@ -1,16 +1,12 @@
 package com.enumerate.disease_detection.Service;
 
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.enumerate.disease_detection.ModelInterfaces.Assistant;
 import com.enumerate.disease_detection.ChatModel.MainModel;
 import com.enumerate.disease_detection.ChatModel.PersistentChatMemoryStore;
 import com.enumerate.disease_detection.Mapper.ChatMessageMapper;
-import com.enumerate.disease_detection.Mapper.SessionMapper;
 import com.enumerate.disease_detection.POJO.PO.ChatMessagePO;
-import com.enumerate.disease_detection.POJO.PO.ChatSessionPO;
 import com.enumerate.disease_detection.POJO.PO.VectorStorePO;
 import com.enumerate.disease_detection.Utils.MysqlEmbeddingStore;
-import com.enumerate.disease_detection.Tools.TitleTool;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.embedding.EmbeddingModel;
