@@ -19,8 +19,8 @@ public class NotificationPO {
     private String type;
     private String title;
     private String content;
-    @TableField("is_read")
-    private Boolean read;
+    @TableField("is_readd")
+    private Boolean isRead;
     private String link;
 
     @TableField(fill = FieldFill.INSERT)

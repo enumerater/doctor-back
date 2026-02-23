@@ -1,8 +1,6 @@
 package com.enumerate.disease_detection.Controller;
 
 import com.enumerate.disease_detection.Common.Result;
-import com.enumerate.disease_detection.POJO.DTO.KnowledgeDTO;
-import com.enumerate.disease_detection.POJO.PO.KnowledgePO;
 import com.enumerate.disease_detection.POJO.PO.UserPO;
 import com.enumerate.disease_detection.POJO.VO.AdminKnowledgeListVO;
 import com.enumerate.disease_detection.POJO.VO.AdminStatsVO;
@@ -42,34 +40,6 @@ public class AdminController {
     public Result<UserPO> toggleUserStatus(@PathVariable Long id) {
         log.info("toggleUserStatus: {}", id);
         UserPO result = adminService.toggleUserStatus(id);
-        return Result.success(result);
-    }
-
-    @GetMapping("/knowledge")
-    public Result<AdminKnowledgeListVO> knowledgeList(@RequestParam(required = false) String keyword) {
-        log.info("admin knowledge list: keyword={}", keyword);
-        AdminKnowledgeListVO result = adminService.getKnowledgeList(keyword);
-        return Result.success(result);
-    }
-
-    @PostMapping("/knowledge")
-    public Result<KnowledgePO> createKnowledge(@RequestBody KnowledgeDTO dto) {
-        log.info("create knowledge: {}", dto);
-        KnowledgePO result = adminService.createKnowledge(dto);
-        return Result.success(result);
-    }
-
-    @PutMapping("/knowledge/{id}")
-    public Result<KnowledgePO> updateKnowledge(@PathVariable Long id, @RequestBody KnowledgeDTO dto) {
-        log.info("update knowledge: id={}", id);
-        KnowledgePO result = adminService.updateKnowledge(id, dto);
-        return Result.success(result);
-    }
-
-    @DeleteMapping("/knowledge/{id}")
-    public Result<Boolean> deleteKnowledge(@PathVariable Long id) {
-        log.info("delete knowledge: {}", id);
-        boolean result = adminService.deleteKnowledge(id);
         return Result.success(result);
     }
 }

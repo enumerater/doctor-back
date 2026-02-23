@@ -1,6 +1,5 @@
 package com.enumerate.disease_detection.POJO.VO;
 
-import com.enumerate.disease_detection.POJO.VO.dashboard.CropDistributionVO;
 import lombok.Builder;
 import lombok.Data;
 

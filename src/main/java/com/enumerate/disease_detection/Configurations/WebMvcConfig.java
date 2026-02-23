@@ -30,6 +30,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(jwtInterceptor)
                 .addPathPatterns("/**") // 拦截所有路径
                 // 仅排除登录、注册接口（无需处理OPTIONS，拦截器内已放行）
-                .excludePathPatterns("/user/login", "/user/register");
+                .excludePathPatterns("/user/login", "/user/register", "/user/sendCode","/user/emailLogin");
     }
 }

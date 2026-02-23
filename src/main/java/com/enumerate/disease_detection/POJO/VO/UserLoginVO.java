@@ -11,4 +11,8 @@ public class UserLoginVO {
     private String username;
     private String msg;
     private String sessionId;
+    private Boolean hasPassword;
+
+    private String email;
+    private String avatar;
 }

@@ -23,7 +23,7 @@ public interface AdminMapper {
     @Select("SELECT COUNT(*) FROM diagnosis WHERE DATE(created_at) = CURDATE()")
     Long countDiagnosesToday();
 
-    @Select("SELECT COUNT(*) FROM knowledge")
+    @Select("SELECT COUNT(*) FROM diseases")
     Long countKnowledgeEntries();
 
     @Select("SELECT COUNT(*) FROM feedback")

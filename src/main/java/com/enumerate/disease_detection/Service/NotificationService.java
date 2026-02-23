@@ -38,7 +38,7 @@ public class NotificationService {
                     .type(po.getType())
                     .title(po.getTitle())
                     .content(po.getContent())
-                    .read(po.getRead())
+                    .read(po.getIsRead())
                     .createdAt(po.getCreatedAt())
                     .link(po.getLink())
                     .build());
@@ -49,13 +49,13 @@ public class NotificationService {
     public Integer unreadCount() {
         Long userId = UserContextHolder.getUserId();
         QueryWrapper<NotificationPO> qw = new QueryWrapper<>();
-        qw.eq("user_id", userId).eq("is_read", false);
+        qw.eq("user_id", userId).eq("is_readd", false);
         return Math.toIntExact(notificationMapper.selectCount(qw));
     }
 
     public boolean markRead(Long id) {
         NotificationPO po = notificationMapper.selectById(id);
-        po.setRead(true);
+        po.setIsRead(true);
         notificationMapper.updateById(po);
         return true;
     }
