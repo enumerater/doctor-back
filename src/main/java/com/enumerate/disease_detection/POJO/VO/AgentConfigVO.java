@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 @Builder
 public class AgentConfigVO {
     private String id;
-    private  String userId;
     private String name;
     private String description;
     private Boolean isDefault;

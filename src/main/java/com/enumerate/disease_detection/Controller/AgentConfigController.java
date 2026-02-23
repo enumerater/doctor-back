@@ -33,13 +33,12 @@ public class AgentConfigController {
     public Result<List<AgentConfigVO>> list() {
 
         log.info("=== agentConfig controller ===");
-        List<AgentConfigPO> agentConfigPOList = agentConfigMapper.selectList(null);
+        List<AgentConfigPO> agentConfigPOList = agentConfigMapper.selectList(new QueryWrapper<AgentConfigPO>().eq("user_id", UserContextHolder.getUserId()));
         List<AgentConfigVO> agentConfigVOList = new ArrayList<>();
         for (AgentConfigPO agentConfigPO : agentConfigPOList) {
             AgentConfigVO agentConfigVO = AgentConfigVO.builder().build();
             BeanUtils.copyProperties(agentConfigPO, agentConfigVO);
             agentConfigVO.setId(agentConfigPO.getId().toString());
-            agentConfigVO.setUserId(agentConfigPO.getUserId().toString());
             agentConfigVOList.add(agentConfigVO);
         }
         return Result.success(agentConfigVOList);
