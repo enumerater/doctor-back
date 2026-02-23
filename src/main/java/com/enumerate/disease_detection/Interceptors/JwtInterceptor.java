@@ -54,4 +54,10 @@ public class JwtInterceptor implements HandlerInterceptor {
         // 校验通过则放行
         return true;
     }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        UserContextHolder.removeUserId();
+        UserContextHolder.removeUserIp();
+    }
 }

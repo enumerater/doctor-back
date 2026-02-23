@@ -43,8 +43,11 @@ public class SessionController {
     @GetMapping("/page")
     @CrossOrigin
     public Result<List<SessionVO>> getAllSession() {
-        // 按时间排序
-        List<ChatSessionPO> li = sessionMapper.selectList(null, new QueryWrapper<ChatSessionPO>().orderByDesc("create_time"));
+        // 按时间排序，只查询当前用户的会话
+        Long userId = UserContextHolder.getUserId();
+        List<ChatSessionPO> li = sessionMapper.selectList(null, new QueryWrapper<ChatSessionPO>()
+                .eq("user_id", userId)
+                .orderByDesc("create_time"));
 
         List<SessionVO> sessionVOList = new ArrayList<>();
         for (ChatSessionPO chatSessionPO : li) {
@@ -65,7 +68,7 @@ public class SessionController {
     @CrossOrigin
     public Result<String> createSession(@RequestBody ChatSessionDTO chatSessionDTO) {
         ChatSessionPO chatSessionPO = ChatSessionPO.builder().build();
-        chatSessionPO.setUserId(chatSessionDTO.getUserId());
+        chatSessionPO.setUserId(UserContextHolder.getUserId());
         chatSessionPO.setSessionTitle(chatSessionDTO.getSessionTitle());
         chatSessionPO.setSessionStatus("1");
         chatSessionPO.setLastChatTime(LocalDateTime.now());

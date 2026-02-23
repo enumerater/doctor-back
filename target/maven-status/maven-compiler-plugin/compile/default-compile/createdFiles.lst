@@ -8,17 +8,13 @@ com\enumerate\disease_detection\Controller\NotificationController.class
 com\enumerate\disease_detection\POJO\VO\AdminKnowledgeListVO.class
 com\enumerate\disease_detection\POJO\VO\AdminStatsVO.class
 com\enumerate\disease_detection\Controller\AdminController.class
-com\enumerate\disease_detection\Mapper\KnowledgeMapper.class
 com\enumerate\disease_detection\POJO\VO\AdminKnowledgeVO$AdminKnowledgeVOBuilder.class
 com\enumerate\disease_detection\POJO\PO\FeedbackPO$FeedbackPOBuilder.class
-com\enumerate\disease_detection\POJO\PO\KnowledgePO$KnowledgePOBuilder.class
 com\enumerate\disease_detection\POJO\VO\AdminKnowledgeVO.class
 com\enumerate\disease_detection\POJO\PO\NotificationPO$NotificationPOBuilder.class
-com\enumerate\disease_detection\POJO\PO\KnowledgePO.class
 com\enumerate\disease_detection\POJO\VO\AdminUserVO.class
 com\enumerate\disease_detection\Controller\FeedbackController.class
 com\enumerate\disease_detection\Service\AgentWorkflowService.class
-com\enumerate\disease_detection\POJO\DTO\KnowledgeDTO.class
 com\enumerate\disease_detection\POJO\PO\NotificationPO.class
 com\enumerate\disease_detection\POJO\DTO\FeedbackStatusDTO.class
 com\enumerate\disease_detection\POJO\VO\NotificationVO$NotificationVOBuilder.class

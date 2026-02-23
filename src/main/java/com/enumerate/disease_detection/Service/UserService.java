@@ -155,7 +155,7 @@ public class UserService {
                     .avatar(AvatarConstant.DEFAULT_AVATAR)
                     .status(UserStatusConstant.USER_NORMAL)
                     .deleted(DeleteConstant.UNDELETED)
-                    .sessionId(0L) // 初始sessionId
+                    .sessionId(1L) // 初始sessionId
                     .build();
             userMapper.insert(newUser);
             // 获取新创建的用户信息

@@ -6,7 +6,8 @@
       "Bash(mvn compile:*)",
       "Bash(find:*)",
       "Bash(tail:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep:*)"
     ]
   }
 }

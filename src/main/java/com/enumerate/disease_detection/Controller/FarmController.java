@@ -2,6 +2,7 @@ package com.enumerate.disease_detection.Controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.enumerate.disease_detection.Common.Result;
+import com.enumerate.disease_detection.Local.UserContextHolder;
 import com.enumerate.disease_detection.Mapper.FarmMapper;
 import com.enumerate.disease_detection.Mapper.PlotMapper;
 import com.enumerate.disease_detection.Mapper.PlotStageMapper;
@@ -35,7 +36,8 @@ public class FarmController {
 
     @GetMapping("/list")
     public Result<List<FarmVO>> list() {
-        List<FarmPO> t = farmMapper.selectList(null);
+        Long userId = UserContextHolder.getUserId();
+        List<FarmPO> t = farmMapper.selectList(new QueryWrapper<FarmPO>().eq("user_id", userId));
         List<FarmVO> res = t.stream().map(q -> FarmVO.builder()
                 .id(String.valueOf( q.getId()))
                 .userId(String.valueOf(q.getUserId()))
@@ -58,6 +60,9 @@ public class FarmController {
     public Result<FarmDetailVO> get(@PathVariable String farmId) {
         log.info("获取农场信息：【{}】", farmId);
         FarmPO farmPO = farmMapper.selectById(farmId);
+        if (farmPO == null || !farmPO.getUserId().equals(UserContextHolder.getUserId())) {
+            return Result.error(403, "农场不存在或无权访问");
+        }
 
         List<PlotPO> plotPOLi = plotMapper.selectList(new QueryWrapper<PlotPO>().eq("farm_id", farmId));
         List<PlotVO> plotVOList = plotPOLi.stream().map(q -> PlotVO.builder()
@@ -88,6 +93,10 @@ public class FarmController {
     @PutMapping("/{farmId}")
     public Result<String> update(@PathVariable String farmId, @RequestBody FarmDTO farmDTO) {
         log.info("更新农场信息：【{}】", farmId);
+        FarmPO existFarm = farmMapper.selectById(farmId);
+        if (existFarm == null || !existFarm.getUserId().equals(UserContextHolder.getUserId())) {
+            return Result.error(403, "农场不存在或无权操作");
+        }
         farmService.update(farmId, farmDTO);
         return Result.success("更新成功");
     }
@@ -95,6 +104,10 @@ public class FarmController {
     @DeleteMapping("/{farmId}")
     public Result<String> delete(@PathVariable String farmId) {
         log.info("删除农场信息：【{}】", farmId);
+        FarmPO existFarm = farmMapper.selectById(farmId);
+        if (existFarm == null || !existFarm.getUserId().equals(UserContextHolder.getUserId())) {
+            return Result.error(403, "农场不存在或无权操作");
+        }
         farmMapper.deleteById(farmId);
         return Result.success("删除成功");
     }
@@ -105,6 +118,10 @@ public class FarmController {
     @PostMapping("/{farmId}/plot")
     public Result<String> addPlot(@PathVariable String farmId,@RequestBody PlotDTO plotDTO) {
         log.info("添加地块：【{}】", farmId);
+        FarmPO existFarm = farmMapper.selectById(farmId);
+        if (existFarm == null || !existFarm.getUserId().equals(UserContextHolder.getUserId())) {
+            return Result.error(403, "农场不存在或无权操作");
+        }
         farmService.addPlot(farmId,plotDTO);
         return Result.success("添加成功");
     }
@@ -112,6 +129,10 @@ public class FarmController {
     @GetMapping("/{farmId}/plot/{plotId}")
     public Result<PlotVO> getPlot(@PathVariable String farmId,@PathVariable String plotId) {
         log.info("获取地块信息：【{}】", plotId);
+        FarmPO existFarm = farmMapper.selectById(farmId);
+        if (existFarm == null || !existFarm.getUserId().equals(UserContextHolder.getUserId())) {
+            return Result.error(403, "农场不存在或无权访问");
+        }
         QueryWrapper<PlotPO> queryWrapper = new QueryWrapper<PlotPO>().eq("id", plotId).eq("farm_id", farmId);
         PlotPO plotPO = plotMapper.selectOne(queryWrapper);
 
@@ -129,6 +150,10 @@ public class FarmController {
     @PutMapping("/{farmId}/plot/{plotId}")
     public Result<String> updatePlot(@PathVariable String farmId,@PathVariable String plotId,@RequestBody PlotDTO plotDTO) {
         log.info("更新地块信息：【{}】", plotId);
+        FarmPO existFarm = farmMapper.selectById(farmId);
+        if (existFarm == null || !existFarm.getUserId().equals(UserContextHolder.getUserId())) {
+            return Result.error(403, "农场不存在或无权操作");
+        }
         QueryWrapper<PlotPO> queryWrapper = new QueryWrapper<PlotPO>().eq("id", plotId).eq("farm_id", farmId);
         PlotPO plotPO = plotMapper.selectOne(queryWrapper);
         plotPO.setName(plotDTO.getName());
@@ -142,6 +167,10 @@ public class FarmController {
     @DeleteMapping("/{farmId}/plot/{plotId}")
     public Result<String> deletePlot(@PathVariable String farmId,@PathVariable String plotId) {
         log.info("删除地块信息：【{}】", plotId);
+        FarmPO existFarm = farmMapper.selectById(farmId);
+        if (existFarm == null || !existFarm.getUserId().equals(UserContextHolder.getUserId())) {
+            return Result.error(403, "农场不存在或无权操作");
+        }
         QueryWrapper<PlotPO> queryWrapper = new QueryWrapper<PlotPO>().eq("id", plotId).eq("farm_id", farmId);
         PlotPO plotPO = plotMapper.selectOne(queryWrapper);
         plotMapper.deleteById(plotPO);
@@ -154,6 +183,10 @@ public class FarmController {
     @PutMapping("/{farmId}/plot/{plotId}/stage")
     public Result<String> updatePlotStage(@PathVariable String farmId,@PathVariable String plotId,@RequestBody PlotStageDTO plotStageDTO) {
         log.info("更新地块信息：【{}】", plotId);
+        FarmPO existFarm = farmMapper.selectById(farmId);
+        if (existFarm == null || !existFarm.getUserId().equals(UserContextHolder.getUserId())) {
+            return Result.error(403, "农场不存在或无权操作");
+        }
         QueryWrapper<PlotPO> queryWrapper = new QueryWrapper<PlotPO>().eq("id", plotId).eq("farm_id", farmId);
         PlotPO plotPO = plotMapper.selectOne(queryWrapper);
         plotPO.setGrowthStage(plotStageDTO.getStage());

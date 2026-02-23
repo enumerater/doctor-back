@@ -126,25 +126,33 @@ public class VisionController {
     @GetMapping("/getPic")
     @CrossOrigin
     public Result<PicVO> getPic(@RequestParam(value = "picCode", required = false) String urlCode) {
-        PicDTO picDTO = picMapper.selectOne(new QueryWrapper<PicDTO>().eq("pic_code", urlCode));
-        if (picDTO == null) {
-            return Result.success(null);
-        }
-        PicVO picVO = new PicVO();
-        picVO.setUrl(picDTO.getPicUrl());
+        log.info("获取图片：{}", urlCode);
 
-        return Result.success(picVO);
+        return null ;
+
+//        PicDTO picDTO = picMapper.selectOne(new QueryWrapper<PicDTO>().eq("pic_code", urlCode));
+//        if (picDTO == null) {
+//            return Result.success(null);
+//        }
+//        PicVO picVO = new PicVO();
+//        picVO.setUrl(picDTO.getPicUrl());
+//
+//        return Result.success(picVO);
     }
 
     @GetMapping("/savePic")
     @CrossOrigin
     public Result<String> setPic(@RequestParam(value = "picCode", required = false) String urlCode,
                                  @RequestParam(value = "picUrl", required = false) String picUrl) {
-        PicDTO picDTO = new PicDTO();
-        picDTO.setPicCode(urlCode);
-        picDTO.setPicUrl(picUrl);
-        picMapper.insert(picDTO);
-        return Result.success(urlCode);
+
+        return null;
+//        log.info("保存图片：{}", urlCode);
+//
+//        PicDTO picDTO = new PicDTO();
+//        picDTO.setPicCode(urlCode);
+//        picDTO.setPicUrl(picUrl);
+//        picMapper.insert(picDTO);
+//        return Result.success(urlCode);
     }
 
 

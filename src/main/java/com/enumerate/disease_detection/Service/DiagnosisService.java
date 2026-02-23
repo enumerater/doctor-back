@@ -1,6 +1,8 @@
 package com.enumerate.disease_detection.Service;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.enumerate.disease_detection.Local.UserContextHolder;
 import com.enumerate.disease_detection.Mapper.DiagnosisMapper;
 import com.enumerate.disease_detection.POJO.PO.DiagnosisPO;
 import com.enumerate.disease_detection.POJO.VO.CropDistribution;
@@ -22,7 +24,8 @@ public class DiagnosisService {
 
 
     public List<DiagnosisVO> list() {
-        List<DiagnosisPO> li = diagnosisMapper.selectList( null);
+        Long userId = UserContextHolder.getUserId();
+        List<DiagnosisPO> li = diagnosisMapper.selectList(new QueryWrapper<DiagnosisPO>().eq("user_id", userId));
         List<DiagnosisVO> res = new ArrayList<>();
 
         for (DiagnosisPO diagnosis : li) {
@@ -50,17 +53,18 @@ public class DiagnosisService {
 
 
     public DiagnosisStatusVO getDiagnosisStatus() {
+        Long userId = UserContextHolder.getUserId();
         // 1. 统计总数、患病数、健康数
-        Map<String, Object> statusMap = diagnosisMapper.countTotalStatus();
-        Long total = ((Number) statusMap.get("total")).longValue();
-        Long diseased = ((Number) statusMap.get("diseased")).longValue();
-        Long healthy = ((Number) statusMap.get("healthy")).longValue();
+        Map<String, Object> statusMap = diagnosisMapper.countTotalStatus(userId);
+        Long total = statusMap.get("total") != null ? ((Number) statusMap.get("total")).longValue() : 0L;
+        Long diseased = statusMap.get("diseased") != null ? ((Number) statusMap.get("diseased")).longValue() : 0L;
+        Long healthy = statusMap.get("healthy") != null ? ((Number) statusMap.get("healthy")).longValue() : 0L;
 
         // 2. 查询作物分布
-        List<CropDistribution> cropDistribution = diagnosisMapper.selectCropDistribution();
+        List<CropDistribution> cropDistribution = diagnosisMapper.selectCropDistribution(userId);
 
         // 3. 查询病害分布
-        List<DiseaseDistributionVO> diseaseDistribution = diagnosisMapper.selectDiseaseDistribution();
+        List<DiseaseDistributionVO> diseaseDistribution = diagnosisMapper.selectDiseaseDistribution(userId);
 
         // 4. 组装VO（使用Builder模式）
         return DiagnosisStatusVO.builder()
