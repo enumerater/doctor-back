@@ -7,7 +7,23 @@
       "Bash(find:*)",
       "Bash(tail:*)",
       "Bash(ls:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "WebFetch(domain:docs.langchain4j.dev)",
+      "Bash(echo $USERPROFILE:*)",
+      "Bash(test:*)",
+      "Bash(gh api repos/langchain4j/langchain4j/contents/langchain4j-core/src/main/java/dev/langchain4j/model/chat/request/ChatRequest.java?ref=1.10.0 --jq '.content' | base64 -d 2>/dev/null)",
+      "Bash(gh api repos/langchain4j/langchain4j/contents/langchain4j-core/src/main/java/dev/langchain4j/agent/tool/ToolSpecifications.java?ref=1.10.0 --jq '.content' | base64 -d 2>/dev/null)",
+      "Bash(gh api repos/langchain4j/langchain4j/contents/langchain4j/src/main/java/dev/langchain4j/service/tool/DefaultToolExecutor.java?ref=1.10.0 --jq '.content' | base64 -d 2>/dev/null)",
+      "Bash(gh api repos/langchain4j/langchain4j/contents/langchain4j-core/src/main/java/dev/langchain4j/model/chat/response/ChatResponse.java?ref=1.10.0 --jq '.content' | base64 -d 2>/dev/null)",
+      "Bash(which curl:*)",
+      "Bash(curl -sL \"https://api.github.com/repos/langchain4j/langchain4j/contents/langchain4j-core/src/main/java/dev/langchain4j/agent/tool/ToolSpecifications.java?ref=1.10.0\" | python -c \"import sys,json,base64; data=json.load\\(sys.stdin\\); print\\(base64.b64decode\\(data['content']\\).decode\\(\\)\\)\" 2>/dev/null)",
+      "Bash(curl -sL \"https://api.github.com/repos/langchain4j/langchain4j/contents/langchain4j/src/main/java/dev/langchain4j/service/tool/DefaultToolExecutor.java?ref=1.10.0\" | python -c \"import sys,json,base64; data=json.load\\(sys.stdin\\); print\\(base64.b64decode\\(data['content']\\).decode\\(\\)\\)\" 2>/dev/null)",
+      "Bash(curl -sL \"https://api.github.com/repos/langchain4j/langchain4j/contents/langchain4j-core/src/main/java/dev/langchain4j/model/chat/response/ChatResponse.java?ref=1.10.0\" | python -c \"import sys,json,base64; data=json.load\\(sys.stdin\\); print\\(base64.b64decode\\(data['content']\\).decode\\(\\)\\)\" 2>/dev/null)",
+      "Bash(head:*)",
+      "Bash(curl:*)",
+      "Bash(grep langchain4j:*)",
+      "Bash(cd:*)",
+      "Bash(cd \"E:/java_main/codes/disease_detection\" && javap -p -classpath \"E:/java_main/mvn-repository/dev/langchain4j/langchain4j-core/1.10.0/langchain4j-core-1.10.0.jar\" \"dev.langchain4j.model.chat.request.json.JsonObjectSchema\\\\$Builder\" 2>&1)"
     ]
   }
 }

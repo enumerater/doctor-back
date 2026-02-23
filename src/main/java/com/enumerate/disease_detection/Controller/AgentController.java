@@ -35,7 +35,7 @@ public class AgentController {
             @RequestParam Long sessionId
     ) throws IOException {
         log.info("Agent工作流开始处理");
-        log.info("prompt: {} | image: {}", prompt, image);
+        log.info("prompt: {} | image: {} {}", prompt, image,userId);
 
         response.setContentType("text/event-stream;charset=UTF-8");
         response.setHeader("Cache-Control", "no-cache");
@@ -54,7 +54,11 @@ public class AgentController {
             emitter.completeWithError(e);
         });
 
-        agentWorkflowService.execute(emitter, prompt + " " + image, userId);
+        String input = prompt;
+        if (image != null && !image.isBlank() && !"null".equals(image)) {
+            input = prompt + "\n\n[附图]: " + image;
+        }
+        agentWorkflowService.execute(emitter, input, userId);
 
         return emitter;
     }

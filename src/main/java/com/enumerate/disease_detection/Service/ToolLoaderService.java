@@ -6,6 +6,8 @@ import com.enumerate.disease_detection.POJO.PO.ToolsPO;
 import com.enumerate.disease_detection.Tools.DynamicTool;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.agent.tool.ToolSpecification;
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -132,5 +134,101 @@ public class ToolLoaderService {
         prompt.append("当用户的需求匹配某个Tool时，请主动建议或直接调用该Tool。\n");
 
         return prompt.toString();
+    }
+
+    /**
+     * 加载数据库中的DynamicTool，并将其转换为LangChain4j ToolSpecification
+     *
+     * @return 以工具名称为key的DynamicToolEntry Map
+     */
+    public Map<String, DynamicToolEntry> loadDynamicToolSpecs() {
+        Map<String, DynamicToolEntry> result = new LinkedHashMap<>();
+
+        try {
+            List<DynamicTool> tools = loadAllTools();
+            for (DynamicTool tool : tools) {
+                ToolDefinitionDTO def = tool.getToolDefinition();
+                String toolName = def.getName();
+
+                // 构建参数 Schema
+                JsonObjectSchema.Builder schemaBuilder = JsonObjectSchema.builder();
+                List<String> required = new ArrayList<>();
+
+                if (def.getApiConfig() != null && def.getApiConfig().getParams() != null) {
+                    for (ToolDefinitionDTO.ParamDefinition param : def.getApiConfig().getParams()) {
+                        String paramName = param.getName();
+                        String type = param.getType() != null ? param.getType().toLowerCase() : "string";
+                        String desc = param.getDescription() != null ? param.getDescription() : "";
+
+                        switch (type) {
+                            case "number", "float", "double" ->
+                                    schemaBuilder.addNumberProperty(paramName, desc);
+                            case "integer", "int", "long" ->
+                                    schemaBuilder.addIntegerProperty(paramName, desc);
+                            default ->
+                                    schemaBuilder.addStringProperty(paramName, desc);
+                        }
+
+                        if (Boolean.TRUE.equals(param.getRequired())) {
+                            required.add(paramName);
+                        }
+                    }
+                }
+
+                JsonObjectSchema parametersSchema = schemaBuilder
+                        .required(required)
+                        .build();
+
+                ToolSpecification spec = ToolSpecification.builder()
+                        .name(toolName)
+                        .description(tool.getToolDescription())
+                        .parameters(parametersSchema)
+                        .build();
+
+                result.put(toolName, new DynamicToolEntry(spec, tool));
+                log.info("已注册DynamicTool规范: {}", toolName);
+            }
+        } catch (Exception e) {
+            log.error("加载DynamicTool规范失败", e);
+        }
+
+        return result;
+    }
+
+    /**
+     * 持有ToolSpecification和对应DynamicTool执行器的容器
+     */
+    public static class DynamicToolEntry {
+        private final ToolSpecification toolSpecification;
+        private final DynamicTool dynamicTool;
+
+        public DynamicToolEntry(ToolSpecification toolSpecification, DynamicTool dynamicTool) {
+            this.toolSpecification = toolSpecification;
+            this.dynamicTool = dynamicTool;
+        }
+
+        public ToolSpecification getToolSpecification() {
+            return toolSpecification;
+        }
+
+        public DynamicTool getDynamicTool() {
+            return dynamicTool;
+        }
+
+        /**
+         * 执行动态工具
+         *
+         * @param arguments JSON格式的参数字符串
+         * @return 执行结果
+         */
+        public String execute(String arguments) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                Map<String, Object> params = mapper.readValue(arguments, new TypeReference<>() {});
+                return dynamicTool.execute(params);
+            } catch (Exception e) {
+                return "动态工具执行失败: " + e.getMessage();
+            }
+        }
     }
 }

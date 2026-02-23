@@ -1,24 +1,21 @@
 package com.enumerate.disease_detection.Tools;
 
-import com.enumerate.disease_detection.ChatModel.MainModel;
 import com.enumerate.disease_detection.POJO.VO.CropDiseaseAnalysisVO;
 import com.enumerate.disease_detection.Utils.FastApiClientUtil;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-
 @Component
+@Slf4j
 public class VisioTool {
 
-    @Autowired
-    private MainModel mainModel;
-
-    @Tool("视觉模型工具")
-    public String visionTool(@P("imageUrl")  String imageUrl,@P("作物类型") String cropType) throws Exception {
+    @Tool("农作物病害图像识别工具，通过分析作物图片来诊断可能的病害。当用户提供了作物图片URL并希望识别病害时应调用此工具。输入图片URL和作物类型，返回病害诊断结果。")
+    public String visionTool(
+            @P("作物图片的URL地址") String imageUrl,
+            @P("作物类型，如水稻、小麦、玉米等") String cropType) throws Exception {
         log.info("工具调用: 视觉模型工具，参数: imageUrl={}, cropType={}", imageUrl, cropType);
-
 
         String prompt = "理解图片，输出农业病害诊断结果，不用给如何治疗，只需要给诊断结果";
 
@@ -30,7 +27,4 @@ public class VisioTool {
 
         return thinking + "\n" + result;
     }
-    
-    // 使用Slf4j日志记录
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(VisioTool.class);
 }
