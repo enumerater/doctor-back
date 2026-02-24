@@ -68,7 +68,7 @@ public class DatabaseTool {
     }
 
     @Tool("查询用户的农场和地块信息，包括农场名称、位置、面积，以及各地块的作物类型、播种日期、生长阶段等。当用户询问'我的农场'、'我的地块'、'种了什么'等问题时应调用此工具。")
-    public String queryUserFarmInfo(@P("用户ID") Long userId) {
+    public String queryUserFarmInfo(@P("用户ID") String userId) {
         log.info("工具调用: 查询农场信息, userId={}", userId);
 
         LambdaQueryWrapper<FarmPO> farmWrapper = new LambdaQueryWrapper<>();
