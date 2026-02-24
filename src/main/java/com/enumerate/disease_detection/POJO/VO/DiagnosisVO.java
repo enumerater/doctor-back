@@ -12,7 +12,6 @@ public class DiagnosisVO {
     private String cropType;
     private Integer hasDisease;
     private String diseaseName;
-    private Integer confidence;
     private String severity;
     private String result;
 

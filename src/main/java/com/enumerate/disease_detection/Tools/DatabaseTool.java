@@ -55,13 +55,12 @@ public class DatabaseTool {
         sb.append(String.format("共找到 %d 条诊断记录：\n", records.size()));
         for (int i = 0; i < records.size(); i++) {
             DiagnosisPO r = records.get(i);
-            sb.append(String.format("%d. [%s] 作物: %s | 是否患病: %s | 病害: %s | 置信度: %d%% | 严重程度: %s | 诊断结果: %s\n",
+            sb.append(String.format("%d. [%s] 作物: %s | 是否患病: %s | 病害: %s | 严重程度: %s | 诊断结果: %s\n",
                     i + 1,
                     r.getCreatedAt() != null ? r.getCreatedAt() : "未知时间",
                     r.getCropType() != null ? r.getCropType() : "未知",
                     r.getHasDisease() != null && r.getHasDisease() == 1 ? "是" : "否",
                     r.getDiseaseName() != null ? r.getDiseaseName() : "无",
-                    r.getConfidence() != null ? r.getConfidence() : 0,
                     r.getSeverity() != null ? r.getSeverity() : "未知",
                     r.getResult() != null ? r.getResult() : "无"));
         }

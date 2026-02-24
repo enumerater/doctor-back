@@ -35,7 +35,6 @@ public class DiagnosisService {
                     .cropType(diagnosis.getCropType())
                     .hasDisease(diagnosis.getHasDisease())
                     .diseaseName(diagnosis.getDiseaseName())
-                    .confidence(diagnosis.getConfidence())
                     .severity(diagnosis.getSeverity())
                     .result(diagnosis.getResult())
                     .status(diagnosis.getStatus())
