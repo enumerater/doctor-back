@@ -1,6 +1,7 @@
 package com.enumerate.disease_detection.Tools;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.enumerate.disease_detection.Mapper.DiagnosisMapper;
 import com.enumerate.disease_detection.Mapper.DiseasesMapper;
 import com.enumerate.disease_detection.Mapper.FarmMapper;
@@ -114,14 +115,16 @@ public class DatabaseTool {
     public String searchDiseaseKnowledge(@P("搜索关键词，如病害名称、作物名称等") String keyword) {
         log.info("工具调用: 搜索病害知识库, keyword={}", keyword);
 
-        LambdaQueryWrapper<DiseasesPO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(DiseasesPO::getName, keyword)
+        QueryWrapper<DiseasesPO> wrapper = new QueryWrapper<>();
+        wrapper.like("disease_name", keyword)
                 .or()
-                .like(DiseasesPO::getCropName, keyword)
+                .like("crop_name", keyword)
                 .or()
-                .like(DiseasesPO::getSymptomsText, keyword);
+                .like("symbol", keyword)
+                .last("LIMIT 10");
 
         List<DiseasesPO> diseases = diseasesMapper.selectList(wrapper);
+        log.info("搜索+++++++++++++++++++++{}", keyword);
 
         if (diseases.isEmpty()) {
             return "未找到与\"" + keyword + "\"相关的病害知识。";
@@ -131,33 +134,15 @@ public class DatabaseTool {
         sb.append(String.format("找到 %d 条相关病害知识：\n", diseases.size()));
 
         for (DiseasesPO d : diseases) {
-            sb.append(String.format("\n【%s】(作物: %s, 分类: %s, 严重程度: %s)\n",
-                    d.getName(),
+            sb.append(String.format("\n【%s】(作物: %s, 分类: %s)\n",
+                    d.getDiseaseName(),
                     d.getCropName() != null ? d.getCropName() : "未知",
-                    d.getCategory() != null ? d.getCategory() : "未知",
-                    d.getSeverity() != null ? d.getSeverity() : "未知"));
-            if (d.getSymptomsText() != null) {
-                sb.append("  症状: ").append(d.getSymptomsText()).append("\n");
+                    d.getCategory() != null ? d.getCategory() : "未知" ));
+            if (d.getSymbol() != null) {
+                sb.append("  症状: ").append(d.getSymbol()).append("\n");
             }
-            if (d.getConditionsTemperature() != null || d.getConditionsHumidity() != null) {
-                sb.append("  发病条件: ");
-                if (d.getConditionsTemperature() != null) sb.append("温度 ").append(d.getConditionsTemperature()).append(" ");
-                if (d.getConditionsHumidity() != null) sb.append("湿度 ").append(d.getConditionsHumidity()).append(" ");
-                if (d.getConditionsSeason() != null) sb.append("季节 ").append(d.getConditionsSeason()).append(" ");
-                if (d.getConditionsStage() != null) sb.append("阶段 ").append(d.getConditionsStage());
-                sb.append("\n");
-            }
-            if (d.getTransmission() != null) {
-                sb.append("  传播途径: ").append(d.getTransmission()).append("\n");
-            }
-            if (d.getPreventionAgricultural() != null) {
-                sb.append("  农业防治: ").append(d.getPreventionAgricultural()).append("\n");
-            }
-            if (d.getPreventionChemical() != null) {
-                sb.append("  化学防治: ").append(d.getPreventionChemical()).append("\n");
-            }
-            if (d.getPreventionBiological() != null) {
-                sb.append("  生物防治: ").append(d.getPreventionBiological()).append("\n");
+            if (d.getPrevention() != null) {
+                sb.append("  防治: ").append(d.getPrevention()).append("\n");
             }
         }
         return sb.toString();

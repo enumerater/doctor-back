@@ -35,12 +35,12 @@ public class KnowledgeController {
 
     @GetMapping("/diseases")
     public Result<DiseasesPageResult> getDiseasesByCrop(
-            @RequestParam(required = false) String cropName,
-            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) String crop_name,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer pageSize) {
-        DiseasesPageResult res = knowledgeService.getDiseasesByCrop(cropName, page, pageSize, keyword, category);
+        DiseasesPageResult res = knowledgeService.getDiseasesByCrop(category, crop_name, keyword, page, pageSize);
 
         return Result.success(res);
     }
@@ -58,11 +58,10 @@ public class KnowledgeController {
     }
 
     @GetMapping("/search")
-    public Result<List<DiseasesPO>> searchDisease(@RequestParam String keyword) {
+    public Result<DiseasesPageResult> searchDisease(@RequestParam String keyword,
+                                                  @RequestParam Integer page, @RequestParam Integer pageSize) {
         log.info("=== searchDisease ===");
-
-        List<DiseasesPO> res = diseasesMapper.selectList(new QueryWrapper<DiseasesPO>().like("name", keyword));
-
+        DiseasesPageResult res = knowledgeService.getDiseasesByCrop("", "", keyword, page, pageSize);
         return Result.success( res);
     }
 
@@ -74,6 +73,26 @@ public class KnowledgeController {
         log.info("=== getSeasonalRisk ===");
 
         List<DiseaseSeasonPO> res = seasonalMapper.selectList(new QueryWrapper<DiseaseSeasonPO>().eq("month", month));
+
+        return Result.success(res);
+    }
+
+    @GetMapping("/diseases/categories")
+    public Result<List<String>> getDiseaseCategories() {
+        log.info("=== getDiseaseCategories ===");
+
+        List<String> res = diseasesMapper.selectList(new QueryWrapper<DiseasesPO>().select("category")).stream().map(DiseasesPO::getCategory).distinct().toList();
+
+        return Result.success(res);
+    }
+
+
+    @GetMapping("/diseases/crop_names")
+    public Result<List<String>> getCropName(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String crop_name,
+            @RequestParam(required = false) String keyword) {
+        List<String> res = knowledgeService.getCropName(category);
 
         return Result.success(res);
     }

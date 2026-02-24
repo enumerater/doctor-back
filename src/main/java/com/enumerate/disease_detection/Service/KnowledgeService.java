@@ -30,7 +30,7 @@ public class KnowledgeService {
     }
 
     // 假设你的 mapper 和返回结果类已经正确引入
-    public DiseasesPageResult getDiseasesByCrop(String cropName, Integer page, Integer pageSize, String keyword, String category) {
+    public DiseasesPageResult getDiseasesByCrop(String category, String cropName, String keyword, Integer page, Integer pageSize) {
         // 1. 参数校验：处理空值和非法值，设置默认分页参数
         if (page == null || page < 1) {
             page = 1; // 页码默认从1开始
@@ -49,10 +49,10 @@ public class KnowledgeService {
             queryWrapper.eq("crop_name", cropName);
         }
         if (StringUtils.hasText(keyword)) {
-            queryWrapper.like("name", keyword);
+            queryWrapper.like("disease_name", keyword);
         }
         if (StringUtils.hasText(category)) {
-            queryWrapper.eq("category", category);
+            queryWrapper.like("category", category);
         }
 
         // 4. 执行分页查询
@@ -64,5 +64,10 @@ public class KnowledgeService {
         result.setTotal((int) diseasePage.getTotal());   // 符合条件的总记录数（核心修复点）
 
         return result;
+    }
+
+    public List<String> getCropName(String category) {
+
+        return diseasesMapper.selectList(new QueryWrapper<DiseasesPO>().select("crop_name").eq("category", category)).stream().map(DiseasesPO::getCropName).distinct().toList();
     }
 }
