@@ -91,6 +91,8 @@ public class UserService {
             userLoginVO.setHasPassword( true);
             userLoginVO.setEmail(user.getEmail());
             userLoginVO.setAvatar(user.getAvatar());
+            userLoginVO.setRole(user.getRole());
+            userLoginVO.setStatus(user.getStatus());
 
             log.info("登录中");
             log.info("{}",userLoginVO);
@@ -182,6 +184,8 @@ public class UserService {
 
         userLoginVO.setEmail( email);
         userLoginVO.setAvatar(user.getAvatar());
+        userLoginVO.setRole(user.getRole());
+        userLoginVO.setStatus(user.getStatus());
 
 
         log.info("邮箱登录成功，用户信息：{}", userLoginVO);

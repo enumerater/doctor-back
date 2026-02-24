@@ -33,9 +33,9 @@ public class EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail); // 发件人
         message.setTo(toEmail);     // 收件人
-        message.setSubject("【验证码】登录/注册验证"); // 邮件标题
+        message.setSubject("【验证码】小农 登录/注册验证"); // 邮件标题
         // 邮件内容
-        message.setText(String.format("您好！您的登录/注册验证码是：%s，有效期5分钟，请及时使用。", code));
+        message.setText(String.format("您好！您正在进行小农邮箱验证。您的登录/注册验证码是：%s，有效期5分钟，请及时使用。", code));
 
         // 发送邮件
         javaMailSender.send(message);

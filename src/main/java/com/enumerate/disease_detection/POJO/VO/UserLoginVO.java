@@ -12,7 +12,10 @@ public class UserLoginVO {
     private String msg;
     private String sessionId;
     private Boolean hasPassword;
+    private String role;
 
     private String email;
     private String avatar;
+
+    private String status;
 }

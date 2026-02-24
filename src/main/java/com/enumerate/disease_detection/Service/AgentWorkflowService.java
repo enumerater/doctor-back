@@ -5,6 +5,9 @@ import com.enumerate.disease_detection.Tools.DatabaseTool;
 import com.enumerate.disease_detection.Tools.RagTool;
 import com.enumerate.disease_detection.Tools.VisioTool;
 import com.enumerate.disease_detection.Tools.WebSearchTool;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.enumerate.disease_detection.Mapper.ChatMessageMapper;
+import com.enumerate.disease_detection.POJO.PO.ChatMessagePO;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
@@ -22,6 +25,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -55,6 +59,9 @@ public class AgentWorkflowService {
 
     @Autowired
     private WebSearchTool webSearchTool;
+
+    @Autowired
+    private ChatMessageMapper chatMessageMapper;
 
     /** 内置 @Tool Bean 提取的 ToolSpecification 列表 */
     private final List<ToolSpecification> builtinToolSpecs = new ArrayList<>();
