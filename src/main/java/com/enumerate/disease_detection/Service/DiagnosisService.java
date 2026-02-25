@@ -9,6 +9,7 @@ import com.enumerate.disease_detection.POJO.VO.CropDistribution;
 import com.enumerate.disease_detection.POJO.VO.DiagnosisStatusVO;
 import com.enumerate.disease_detection.POJO.VO.DiagnosisVO;
 import com.enumerate.disease_detection.POJO.VO.DiseaseDistributionVO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class DiagnosisService {
 
@@ -58,6 +60,7 @@ public class DiagnosisService {
         Long total = statusMap.get("total") != null ? ((Number) statusMap.get("total")).longValue() : 0L;
         Long diseased = statusMap.get("diseased") != null ? ((Number) statusMap.get("diseased")).longValue() : 0L;
         Long healthy = statusMap.get("healthy") != null ? ((Number) statusMap.get("healthy")).longValue() : 0L;
+        Long nonCrop = statusMap.get("nonCrop") != null ? ((Number) statusMap.get("nonCrop")).longValue() : 0L;
 
         // 2. 查询作物分布
         List<CropDistribution> cropDistribution = diagnosisMapper.selectCropDistribution(userId);
@@ -72,6 +75,7 @@ public class DiagnosisService {
                 .healthy(String.valueOf(healthy))
                 .cropDistribution(cropDistribution)
                 .diseaseDistributionVO(diseaseDistribution) // 注意字段名和JSON的对应
+                .nonCrop(String.valueOf(nonCrop))
                 .build();
     }
 }

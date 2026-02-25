@@ -11,6 +11,7 @@ public class DiagnosisStatusVO {
     private String total;
     private String diseased;
     private String healthy;
+    private String nonCrop;
 
     private List<CropDistribution> cropDistribution;
 

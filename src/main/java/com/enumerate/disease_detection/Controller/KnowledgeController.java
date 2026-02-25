@@ -3,8 +3,6 @@ package com.enumerate.disease_detection.Controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.enumerate.disease_detection.Common.Result;
 import com.enumerate.disease_detection.Mapper.DiseasesMapper;
-import com.enumerate.disease_detection.Mapper.SeasonalMapper;
-import com.enumerate.disease_detection.POJO.PO.DiseaseSeasonPO;
 import com.enumerate.disease_detection.POJO.PO.DiseasesPO;
 import com.enumerate.disease_detection.POJO.VO.CropListVO;
 import com.enumerate.disease_detection.POJO.VO.DiseasesPageResult;
@@ -36,11 +34,11 @@ public class KnowledgeController {
     @GetMapping("/diseases")
     public Result<DiseasesPageResult> getDiseasesByCrop(
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String crop_name,
+            @RequestParam(required = false) String cropName,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer pageSize) {
-        DiseasesPageResult res = knowledgeService.getDiseasesByCrop(category, crop_name, keyword, page, pageSize);
+        DiseasesPageResult res = knowledgeService.getDiseasesByCrop(category, cropName, keyword, page, pageSize);
 
         return Result.success(res);
     }
@@ -63,18 +61,6 @@ public class KnowledgeController {
         log.info("=== searchDisease ===");
         DiseasesPageResult res = knowledgeService.getDiseasesByCrop("", "", keyword, page, pageSize);
         return Result.success( res);
-    }
-
-    @Autowired
-    private SeasonalMapper seasonalMapper;
-
-    @GetMapping("/seasonal-risks")
-    public Result<List<DiseaseSeasonPO>> getSeasonalRisk(@RequestParam String month) {
-        log.info("=== getSeasonalRisk ===");
-
-        List<DiseaseSeasonPO> res = seasonalMapper.selectList(new QueryWrapper<DiseaseSeasonPO>().eq("month", month));
-
-        return Result.success(res);
     }
 
     @GetMapping("/diseases/categories")

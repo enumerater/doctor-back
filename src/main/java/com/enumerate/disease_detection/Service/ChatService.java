@@ -9,6 +9,7 @@ import com.enumerate.disease_detection.POJO.PO.VectorStorePO;
 import com.enumerate.disease_detection.Utils.MysqlEmbeddingStore;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
@@ -20,12 +21,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 @Service
 @Slf4j
 public class ChatService {
+
+    private static final int STREAM_MAX_RETRIES = 2;
 
     @Autowired
     private MainModel mainModel;
@@ -39,61 +45,15 @@ public class ChatService {
 
     @Async("aiAsyncExecutor") // 指定使用我们自定义的线程池，精准控制
     public void hello2(SseEmitter emitter, String prompt) {
-        Assistant assistant = AiServices.create(Assistant.class,mainModel.streamingModel());
-
-        // 1. 定义线程安全的ID生成器（可选：递增序号 / UUID，二选一即可）
-        // 方式1：递增序号（推荐，前端可按序号排序）
-        AtomicInteger msgId = new AtomicInteger(1);
-        // 方式2：UUID（全局唯一，适合分布式场景）
-        // String generateId() { return UUID.randomUUID().toString(); }
-
         try {
+            Assistant assistant = AiServices.create(Assistant.class, mainModel.streamingModel());
+
             EmbeddingModel embeddingModel = mainModel.embeddingModel();
-
             Embedding queryEmbedding = embeddingModel.embed(prompt).content();
-
-            // 5. 相似度搜索（从MySQL中找最相似的向量）
             VectorStorePO mostSimilar = mysqlEmbeddingStore.searchMostSimilar(queryEmbedding);
-
             String knowledgeContext = mostSimilar.getTextContent() != null ? mostSimilar.getTextContent() : "无知识";
 
-            // 调用你的AI流式接口
-            TokenStream tokenStream = assistant.ragChat(knowledgeContext,prompt);
-
-            // 处理分片响应：即时推送
-            tokenStream.onPartialResponse(partialContent -> {
-                        try {
-                            log.info("流式分片内容：{}", partialContent);
-                            // SseEmitter天生无缓冲，直接send就是即时推送，无需额外配置
-//                            emitter.send(StreamChatMsg.builder().text(partialContent).build());
-
-                            // ========== 关键修改：构建带ID的SSE事件 ==========
-                            SseEmitter.SseEventBuilder event = SseEmitter.event()
-                                    .id(String.valueOf(msgId.getAndIncrement())) // 设置SSE的ID字段
-                                    // .id(generateId()) // 若用UUID则替换这行
-                                    .data(partialContent) // 业务数据
-                                    .name("data"); // 可选：设置事件名称（前端可按名称监听）；不设则默认是message
-
-                            // 发送带ID的事件（替代原来直接send对象的方式）
-                            emitter.send(event);
-                        } catch (IOException e) {
-                            log.error("AI分片内容推送失败", e);
-                            emitter.completeWithError(e);
-                        }
-                    })
-                    // 处理流式完成：正常关闭连接
-                    .onCompleteResponse(chatResponse -> {
-                        log.info("\n流式响应完成，完整结果：{}", chatResponse);
-                        emitter.complete();
-                    })
-                    // 处理AI请求异常：异常关闭连接
-                    .onError(throwable -> {
-                        log.error("AI流式请求执行异常", throwable);
-                        emitter.completeWithError(throwable);
-                    })
-                    // 启动流式请求（同步阻塞，仅阻塞当前异步线程，无任何影响）
-                    .start();
-
+            executeStreamWithRetry(() -> assistant.ragChat(knowledgeContext, prompt), emitter, null);
         } catch (Exception e) {
             log.error("AI流式请求初始化失败", e);
             emitter.completeWithError(e);
@@ -102,77 +62,15 @@ public class ChatService {
 
     @Async("aiAsyncExecutor") // 指定使用我们自定义的线程池，精准控制
     public void stream(SseEmitter emitter, String prompt) {
-        Assistant assistant = AiServices.create(Assistant.class,mainModel.streamingModel());
-        AtomicInteger msgId = new AtomicInteger(1);
-        try {
-            TokenStream tokenStream = assistant.streamChat(prompt);
-            tokenStream.onPartialResponse(partialContent -> {
-                try {
-                    log.info("流式分片内容：{}", partialContent);
-                    SseEmitter.SseEventBuilder event = SseEmitter.event()
-                            .id(String.valueOf(msgId.getAndIncrement()))
-                            .data(partialContent) // 业务数据
-                            .name("data");
-                    emitter.send(event);
-                } catch (IOException e) {
-                    log.error("AI分片内容推送失败", e);
-                    emitter.completeWithError(e);
-                }
-            })
-            // 处理流式完成：正常关闭连接
-            .onCompleteResponse(chatResponse -> {
-                log.info("\n流式响应完成，完整结果：{}", chatResponse);
-                emitter.complete();
-            })
-            // 处理AI请求异常：异常关闭连接
-            .onError(throwable -> {
-                log.error("AI流式请求执行异常", throwable);
-                emitter.completeWithError(throwable);
-            })
-            // 启动流式请求（同步阻塞，仅阻塞当前异步线程，无任何影响）
-            .start();
-        } catch (Exception e) {
-            log.error("AI流式请求初始化失败", e);
-            emitter.completeWithError(e);
-        }
+        Assistant assistant = AiServices.create(Assistant.class, mainModel.streamingModel());
+        executeStreamWithRetry(() -> assistant.streamChat(prompt), emitter, null);
     }
 
     @Async("aiAsyncExecutor")
     public void deepThink(SseEmitter emitter, String prompt) {
         log.info("开始执行深度思考");
-        Assistant assistant = AiServices.create(Assistant.class,mainModel.deepThinkModel());
-        AtomicInteger msgId = new AtomicInteger(1);
-        try {
-            TokenStream tokenStream = assistant.chatStream(prompt);
-            tokenStream.onPartialResponse(partialContent -> {
-                        try {
-                            log.info("流式分片内容：{}", partialContent);
-                            SseEmitter.SseEventBuilder event = SseEmitter.event()
-                                    .id(String.valueOf(msgId.getAndIncrement()))
-                                    .data(partialContent) // 业务数据
-                                    .name("data");
-                            emitter.send(event);
-                        } catch (IOException e) {
-                            log.error("AI分片内容推送失败", e);
-                            emitter.completeWithError(e);
-                        }
-                    })
-                    // 处理流式完成：正常关闭连接
-                    .onCompleteResponse(chatResponse -> {
-                        log.info("\n流式响应完成，完整结果：{}", chatResponse);
-                        emitter.complete();
-                    })
-                    // 处理AI请求异常：异常关闭连接
-                    .onError(throwable -> {
-                        log.error("AI流式请求执行异常", throwable);
-                        emitter.completeWithError(throwable);
-                    })
-                    // 启动流式请求（同步阻塞，仅阻塞当前异步线程，无任何影响）
-                    .start();
-        } catch (Exception e) {
-            log.error("AI流式请求初始化失败", e);
-            emitter.completeWithError(e);
-        }
+        Assistant assistant = AiServices.create(Assistant.class, mainModel.deepThinkModel());
+        executeStreamWithRetry(() -> assistant.chatStream(prompt), emitter, null);
     }
 
     @Autowired
@@ -180,7 +78,7 @@ public class ChatService {
 
 
     @Async
-    public void memory(SseEmitter emitter, String prompt,String image ,Long userId, Long sessionId) {
+    public void memory(SseEmitter emitter, String prompt, String image, Long userId, Long sessionId) {
         log.info("开始执行记忆对话");
 
         OpenAiStreamingChatModel model = mainModel.streamingModel();
@@ -198,27 +96,61 @@ public class ChatService {
                 })
                 .build();
 
+        String memoryKey = userId + String.valueOf(sessionId);
+        log.info("开始执行记忆对话{}", memoryKey);
+
+        chatMessageMapper.insert(ChatMessagePO.builder()
+                .id(null)
+                .sessionId(memoryKey)
+                .messageRole("0")
+                .messageContent(prompt)
+                .messageTime(LocalDateTime.now())
+                .deleted("0")
+                .build());
+
+        executeStreamWithRetry(
+                () -> assistant.chatMemory(memoryKey, prompt),
+                emitter,
+                chatResponse -> chatMessageMapper.insert(ChatMessagePO.builder()
+                        .id(null)
+                        .sessionId(memoryKey)
+                        .messageRole("1")
+                        .messageContent(chatResponse.aiMessage().text())
+                        .messageTime(LocalDateTime.now())
+                        .deleted("0")
+                        .build())
+        );
+    }
+
+    // ==================== 流式重试工具方法 ====================
+
+    /**
+     * 执行流式请求，遇到 Connection reset 自动重试
+     *
+     * @param streamSupplier 创建 TokenStream 的工厂（重试时会重新调用）
+     * @param emitter        SSE 推送器
+     * @param onComplete     流式完成后的额外回调（可为null），在 emitter.complete() 之前执行
+     */
+    private void executeStreamWithRetry(Supplier<TokenStream> streamSupplier,
+                                        SseEmitter emitter,
+                                        Consumer<ChatResponse> onComplete) {
         AtomicInteger msgId = new AtomicInteger(1);
+        AtomicInteger retryCount = new AtomicInteger(0);
+        doStartStream(streamSupplier, emitter, msgId, retryCount, onComplete);
+    }
+
+    private void doStartStream(Supplier<TokenStream> streamSupplier,
+                               SseEmitter emitter,
+                               AtomicInteger msgId,
+                               AtomicInteger retryCount,
+                               Consumer<ChatResponse> onComplete) {
         try {
-            log.info("开始执行记忆对话{}", userId + String.valueOf(sessionId));
-            TokenStream tokenStream = assistant.chatMemory(userId + String.valueOf(sessionId) ,prompt);
-
-            chatMessageMapper.insert(ChatMessagePO.builder()
-                    .id(null)
-                    .sessionId(userId + String.valueOf(sessionId))
-                    .messageRole("0")
-                    .messageContent(prompt)
-                    .messageTime(LocalDateTime.now())
-                    .deleted("0")
-                    .build());
-
-
+            TokenStream tokenStream = streamSupplier.get();
             tokenStream.onPartialResponse(partialContent -> {
                         try {
-                            log.info("流式分片内容：{}", partialContent);
                             SseEmitter.SseEventBuilder event = SseEmitter.event()
                                     .id(String.valueOf(msgId.getAndIncrement()))
-                                    .data(partialContent) // 业务数据
+                                    .data(partialContent)
                                     .name("data");
                             emitter.send(event);
                         } catch (IOException e) {
@@ -226,33 +158,45 @@ public class ChatService {
                             emitter.completeWithError(e);
                         }
                     })
-                    // 处理流式完成：正常关闭连接
                     .onCompleteResponse(chatResponse -> {
-                        log.info("\n流式响应完成，完整结果：{}", chatResponse);
-                        chatMessageMapper.insert(ChatMessagePO.builder()
-                                .id(null)
-                                .sessionId(userId + String.valueOf(sessionId))
-                                .messageRole("1")
-                                .messageContent(chatResponse.aiMessage().text())
-                                .messageTime(LocalDateTime.now())
-                                .deleted("0")
-                                .build()
-                        );
-
+                        log.info("流式响应完成，完整结果：{}", chatResponse);
+                        if (onComplete != null) {
+                            onComplete.accept(chatResponse);
+                        }
                         emitter.complete();
                     })
-                    // 处理AI请求异常：异常关闭连接
                     .onError(throwable -> {
-                        log.error("AI流式请求执行异常", throwable);
-                        emitter.completeWithError(throwable);
+                        if (isConnectionReset(throwable) && retryCount.getAndIncrement() < STREAM_MAX_RETRIES) {
+                            log.warn("流式请求遇到Connection reset，第{}次重试", retryCount.get());
+                            doStartStream(streamSupplier, emitter, msgId, retryCount, onComplete);
+                        } else {
+                            log.error("AI流式请求执行异常", throwable);
+                            emitter.completeWithError(throwable);
+                        }
                     })
-                    // 启动流式请求（同步阻塞，仅阻塞当前异步线程，无任何影响）
                     .start();
         } catch (Exception e) {
-            log.error("AI流式请求初始化失败", e);
-            emitter.completeWithError(e);
+            if (isConnectionReset(e) && retryCount.getAndIncrement() < STREAM_MAX_RETRIES) {
+                log.warn("流式请求初始化遇到Connection reset，第{}次重试", retryCount.get());
+                doStartStream(streamSupplier, emitter, msgId, retryCount, onComplete);
+            } else {
+                log.error("AI流式请求初始化失败", e);
+                emitter.completeWithError(e);
+            }
         }
+    }
 
-
+    /**
+     * 判断异常链中是否包含 Connection reset
+     */
+    private boolean isConnectionReset(Throwable t) {
+        while (t != null) {
+            if (t instanceof SocketException && t.getMessage() != null
+                    && t.getMessage().contains("Connection reset")) {
+                return true;
+            }
+            t = t.getCause();
+        }
+        return false;
     }
 }

@@ -1,5 +1,7 @@
 package com.enumerate.disease_detection.Controller;
 
+import cn.hutool.json.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.enumerate.disease_detection.Common.Result;
 import com.enumerate.disease_detection.Local.UserContextHolder;
 import com.enumerate.disease_detection.Mapper.DiagnosisMapper;
@@ -9,6 +11,7 @@ import com.enumerate.disease_detection.POJO.PO.DiagnosisPO;
 import com.enumerate.disease_detection.POJO.VO.DiagnosisStatusVO;
 import com.enumerate.disease_detection.POJO.VO.DiagnosisVO;
 import com.enumerate.disease_detection.Service.DiagnosisService;
+import dev.langchain4j.internal.Json;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -60,19 +63,48 @@ public class DiagnosisController {
 
     @PostMapping
     public Result<DiagnosisPO> save(@RequestBody DiagnosisDTO diagnosisDTO) {
-        log.info("save");
+        log.info("开始保存诊断记录");
+        String resultJson = diagnosisDTO.getResult();
+
+        // 1. 初始化hasDisease变量（提升作用域）
+        Integer hasDisease = 0;
+
+        try {
+            // 2. 解析JSON字符串，获取type字段
+            JSONObject resultObj = JSONObject.parseObject(resultJson);
+            String resultType = resultObj.getString("type");
+
+            // 3. 根据type值设置hasDisease
+            if ("不健康作物".equals(resultType)) {
+                hasDisease = 1;
+            } else if ("非作物".equals(resultType)) {
+                hasDisease = 2;
+            } else {
+                // 健康作物默认0
+                hasDisease = 0;
+            }
+        } catch (Exception e) {
+            log.error("解析result JSON字符串失败：{}", resultJson, e);
+            // 解析失败时默认设为0，也可以根据业务抛异常
+            hasDisease = 0;
+        }
+
+        // 4. 构建PO对象并保存
         DiagnosisPO diagnosisPO = DiagnosisPO.builder()
                 .userId(UserContextHolder.getUserId())
                 .imageUrl(diagnosisDTO.getImageUrl())
                 .cropType(diagnosisDTO.getCropType())
-                .hasDisease(diagnosisDTO.getHasDisease())
+                .hasDisease(hasDisease)  // 现在可以正常访问该变量
                 .diseaseName(diagnosisDTO.getDiseaseName())
                 .severity(diagnosisDTO.getSeverity())
                 .result(diagnosisDTO.getResult())
                 .status(diagnosisDTO.getStatus())
                 .elapsedTime(diagnosisDTO.getElapsedTime())
                 .build();
+
         diagnosisMapper.insert(diagnosisPO);
+        log.info("诊断记录保存成功，ID：{}", diagnosisPO.getId());
+
         return Result.success(diagnosisPO);
     }
 

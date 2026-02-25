@@ -6,7 +6,6 @@ import com.enumerate.disease_detection.Mapper.DiagnosisMapper;
 import com.enumerate.disease_detection.Mapper.DiseasesMapper;
 import com.enumerate.disease_detection.Mapper.FarmMapper;
 import com.enumerate.disease_detection.Mapper.PlotMapper;
-import com.enumerate.disease_detection.Mapper.SeasonalMapper;
 import com.enumerate.disease_detection.POJO.PO.*;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
@@ -32,8 +31,6 @@ public class DatabaseTool {
     @Autowired
     private DiseasesMapper diseasesMapper;
 
-    @Autowired
-    private SeasonalMapper seasonalMapper;
 
     @Tool("查询用户的历史诊断记录，可以了解用户过去的作物病害诊断情况，包括作物类型、病害名称、严重程度、诊断时间等。当用户询问'我之前的诊断记录'、'历史检测结果'、'上次诊断'等问题时应调用此工具。")
     public String queryDiagnosisHistory(
@@ -148,29 +145,4 @@ public class DatabaseTool {
         return sb.toString();
     }
 
-    @Tool("查询指定月份的季节性病害风险信息，了解当月高发病害、风险等级和防治建议。当用户询问'这个月容易得什么病'、'当前季节风险'、'应季病害'等问题时应调用此工具。")
-    public String querySeasonalRisks(@P("月份，1-12的整数") int month) {
-        log.info("工具调用: 查询季节性风险, month={}", month);
-
-        LambdaQueryWrapper<DiseaseSeasonPO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(DiseaseSeasonPO::getMonth, String.valueOf(month));
-
-        List<DiseaseSeasonPO> risks = seasonalMapper.selectList(wrapper);
-
-        if (risks.isEmpty()) {
-            return String.format("%d月暂无季节性病害风险记录。", month);
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("%d月 季节性病害风险（共%d条）：\n", month, risks.size()));
-
-        for (DiseaseSeasonPO r : risks) {
-            sb.append(String.format("  - %s（作物: %s）| 风险等级: %s | %s\n",
-                    r.getDiseaseName() != null ? r.getDiseaseName() : "未知病害",
-                    r.getCropName() != null ? r.getCropName() : "未知",
-                    r.getRiskLevel() != null ? r.getRiskLevel() : "未知",
-                    r.getDescription() != null ? r.getDescription() : ""));
-        }
-        return sb.toString();
-    }
 }

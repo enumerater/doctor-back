@@ -17,9 +17,10 @@ public interface DiagnosisMapper extends BaseMapper<DiagnosisPO> {
      * 统计总数、患病数、健康数（按用户过滤）
      */
     @Select("SELECT " +
-            "COUNT(*) AS total, " +
-            "SUM(CASE WHEN has_disease = 1 THEN 1 ELSE 0 END) AS diseased, " +
-            "SUM(CASE WHEN has_disease = 0 THEN 1 ELSE 0 END) AS healthy " +
+            "COUNT(*) AS total, " +                    // 总记录数
+            "SUM(CASE WHEN has_disease = 1 THEN 1 ELSE 0 END) AS diseased, " +  // 有病作物数
+            "SUM(CASE WHEN has_disease = 0 THEN 1 ELSE 0 END) AS healthy, " +   // 健康作物数
+            "SUM(CASE WHEN has_disease = 2 THEN 1 ELSE 0 END) AS nonCrop " +    // 新增：非作物数
             "FROM diagnosis WHERE user_id = #{userId}")
     Map<String, Object> countTotalStatus(@Param("userId") Long userId);
 

@@ -12,9 +12,11 @@ import com.enumerate.disease_detection.Utils.CaptchaUtils;
 import com.enumerate.disease_detection.Utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.UUID;
@@ -97,6 +99,11 @@ public class UserService {
             log.info("登录中");
             log.info("{}",userLoginVO);
 
+
+            // 修改最后登录时间
+            UserPO u = userMapper.selectById(user.getId());
+            u.setLastLoginTime(LocalDateTime.now());
+            userMapper.updateById(u);
             return userLoginVO;
         }
     }
@@ -191,8 +198,11 @@ public class UserService {
         log.info("邮箱登录成功，用户信息：{}", userLoginVO);
         // 登录成功后删除Redis中的验证码，防止重复使用
         redisService.delete(email);
-        
-        
+
+        // 修改最后登录时间
+        UserPO u = userMapper.selectById(user.getId());
+        u.setLastLoginTime(LocalDateTime.now());
+        userMapper.updateById(u);
 
         return userLoginVO;
     }

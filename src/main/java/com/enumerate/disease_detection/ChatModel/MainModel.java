@@ -26,6 +26,8 @@ public class MainModel {
                 .apiKey(aiModelProperties.getTong().getApiKey())
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
                 .modelName("qwen-flash")
+                .timeout(Duration.ofSeconds(60))
+                .maxRetries(3)
                 .build();
     }
 
@@ -43,9 +45,8 @@ public class MainModel {
         return OpenAiStreamingChatModel.builder()
                 .apiKey(aiModelProperties.getTong().getApiKey())
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
-//                .modelName("qwen-max")
                 .modelName("qwen-flash")
-
+                .timeout(Duration.ofSeconds(60))
                 .build();
     }
 
@@ -60,6 +61,7 @@ public class MainModel {
                 .apiKey(aiModelProperties.getTong().getApiKey())
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
                 .modelName("qwen-plus")
+                .timeout(Duration.ofSeconds(120))
                 .customParameters(modelCustomParams)
                 .build();
     }
