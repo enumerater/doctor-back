@@ -161,6 +161,11 @@ public class FarmController {
         plotPO.setArea(plotDTO.getArea());
         plotPO.setSowingDate(plotDTO.getSowingDate());
         plotMapper.updateById(plotPO);
+
+        // 更新农场面积
+        FarmPO farmPO1 = farmMapper.selectById(farmId);
+        farmPO1.setArea(String.valueOf(Float.parseFloat(farmPO1.getArea()) + Float.parseFloat(plotDTO.getArea())));
+        farmMapper.updateById(farmPO1);
         return Result.success("更新成功");
     }
 
@@ -174,6 +179,11 @@ public class FarmController {
         QueryWrapper<PlotPO> queryWrapper = new QueryWrapper<PlotPO>().eq("id", plotId).eq("farm_id", farmId);
         PlotPO plotPO = plotMapper.selectOne(queryWrapper);
         plotMapper.deleteById(plotPO);
+
+        // 更新农场面积
+        FarmPO farmPO1 = farmMapper.selectById(farmId);
+        farmPO1.setArea(String.valueOf(Float.parseFloat(farmPO1.getArea()) - Float.parseFloat(plotPO.getArea())));
+        farmMapper.updateById(farmPO1);
         return Result.success("删除成功");
     }
 

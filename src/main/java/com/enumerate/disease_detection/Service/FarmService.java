@@ -62,5 +62,10 @@ public class FarmService {
 
                 .build();
         plotMapper.insert(p);
+
+        // 更新农场面积
+        FarmPO farmPO1 = farmMapper.selectById(farmId);
+        farmPO1.setArea(String.valueOf(Float.parseFloat(farmPO1.getArea()) + Float.parseFloat(plotDTO.getArea())));
+        farmMapper.updateById(farmPO1);
     }
 }

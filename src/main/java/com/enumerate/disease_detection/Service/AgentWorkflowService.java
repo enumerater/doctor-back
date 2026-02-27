@@ -1,5 +1,6 @@
 package com.enumerate.disease_detection.Service;
 
+import com.enumerate.disease_detection.Annotations.ToolName;
 import com.enumerate.disease_detection.ChatModel.MainModel;
 import com.enumerate.disease_detection.Tools.DatabaseTool;
 import com.enumerate.disease_detection.Tools.RagTool;
@@ -8,6 +9,7 @@ import com.enumerate.disease_detection.Tools.WebSearchTool;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.enumerate.disease_detection.Mapper.ChatMessageMapper;
 import com.enumerate.disease_detection.POJO.PO.ChatMessagePO;
+import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
@@ -45,8 +47,7 @@ public class AgentWorkflowService {
     @Autowired
     private MainModel mainModel;
 
-    @Autowired
-    private ToolLoaderService toolLoaderService;
+
 
     @Autowired
     private VisioTool visioTool;
@@ -81,16 +82,48 @@ public class AgentWorkflowService {
     }
 
     private void registerToolBean(Object toolBean) {
+        // 1. 生成默认的工具规格列表
         List<ToolSpecification> specs = ToolSpecifications.toolSpecificationsFrom(toolBean);
-        builtinToolSpecs.addAll(specs);
+        Class<?> beanClass = toolBean.getClass();
 
-        for (Method method : toolBean.getClass().getDeclaredMethods()) {
-            if (method.isAnnotationPresent(dev.langchain4j.agent.tool.Tool.class)) {
-                String toolName = method.getName();
+        // 2. 遍历所有带@Tool注解的方法，更新spec的名称
+        for (Method method : beanClass.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(Tool.class)) {
+                // 获取注解指定的工具名称
+                String toolName;
+                if (method.isAnnotationPresent(ToolName.class)) {
+                    ToolName toolNameAnnotation = method.getDeclaredAnnotation(ToolName.class);
+                    toolName = toolNameAnnotation.value();
+                } else {
+                    toolName = method.getName(); // 兜底使用方法名
+                }
+
+                // 找到该方法对应的ToolSpecification并更新名称
+                for (ToolSpecification spec : specs) {
+                    // 匹配规则：根据方法名匹配（默认spec的名称就是方法名）
+                    if (spec.name().equals(method.getName())) {
+                        // 关键修复：使用Builder模式创建新的ToolSpecification
+                        ToolSpecification updatedSpec = ToolSpecification.builder()
+                                .name(toolName)          // 替换为注解指定的名称
+                                .description(spec.description())// 保留原有描述
+                                .parameters(spec.parameters())  // 保留原有参数
+                                .build(); // 构建新的实例
+
+                        // 替换列表中的旧spec
+                        int index = specs.indexOf(spec);
+                        specs.set(index, updatedSpec);
+                        break;
+                    }
+                }
+
+                // 注册执行器（保持原有逻辑）
                 builtinExecutors.put(toolName, new DefaultToolExecutor(toolBean, method));
                 log.info("注册内置工具: {}", toolName);
             }
         }
+
+        // 3. 将更新后的specs添加到内置规格列表
+        builtinToolSpecs.addAll(specs);
     }
 
     /**
@@ -109,15 +142,13 @@ public class AgentWorkflowService {
 
             // 收集所有工具规范
             List<ToolSpecification> allToolSpecs = new ArrayList<>(builtinToolSpecs);
-            Map<String, ToolLoaderService.DynamicToolEntry> dynamicTools = new HashMap<>();
+
+            log.info("内置工具加载完成: {}",
+                    builtinToolSpecs);
 
             try {
-                dynamicTools = toolLoaderService.loadDynamicToolSpecs();
-                for (ToolLoaderService.DynamicToolEntry entry : dynamicTools.values()) {
-                    allToolSpecs.add(entry.getToolSpecification());
-                }
-                log.info("工具加载完成: {} 个内置 + {} 个动态, 共 {} 个",
-                        builtinToolSpecs.size(), dynamicTools.size(), allToolSpecs.size());
+                log.info("工具加载完成: {} 个",
+                        builtinToolSpecs.size());
             } catch (Exception e) {
                 log.error("加载动态工具失败，继续使用内置工具", e);
             }
@@ -168,8 +199,7 @@ public class AgentWorkflowService {
                         try {
                             if (builtinExecutors.containsKey(toolName)) {
                                 result = builtinExecutors.get(toolName).execute(toolRequest, null);
-                            } else if (dynamicTools.containsKey(toolName)) {
-                                result = dynamicTools.get(toolName).execute(toolRequest.arguments());
+
                             } else {
                                 result = "未找到工具: " + toolName;
                                 log.warn("未找到工具: {}", toolName);
@@ -180,7 +210,7 @@ public class AgentWorkflowService {
                         }
 
                         sendDataEvent(emitter, msgId++, "observation",
-                                String.format("[%s] %s", toolName, truncateResult(result)));
+                                String.format("%s", truncateResult(result)));
 
                         ToolExecutionResultMessage resultMessage =
                                 ToolExecutionResultMessage.from(toolRequest, result);
@@ -270,8 +300,7 @@ public class AgentWorkflowService {
     }
 
     private String truncateResult(String result) {
-        if (result == null) return "";
-        return result.length() > 500 ? result.substring(0, 500) + "..." : result;
+        return result;
     }
 
     // ========== SSE 事件发送 ==========
@@ -291,6 +320,7 @@ public class AgentWorkflowService {
             log.error("发送状态事件失败", e);
         }
     }
+
 
     private void sendDataEvent(SseEmitter emitter, int id, String type, String content) {
         try {

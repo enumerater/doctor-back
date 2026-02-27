@@ -1,6 +1,7 @@
 package com.enumerate.disease_detection.Utils;
 
 import com.enumerate.disease_detection.POJO.VO.CropDiseaseAnalysisVO;
+import lombok.extern.slf4j.Slf4j;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -14,6 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * 修复版：移除受保护的Connection请求头
  */
+@Slf4j
 public class FastApiClientUtil {
     // 全局HttpClient实例（单例复用）
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
@@ -31,6 +33,7 @@ public class FastApiClientUtil {
      * @throws Exception 连接/解析异常
      */
     public static CropDiseaseAnalysisVO callCropDiseaseApi(String imageUrl, String question) throws Exception {
+        log.info("图像识别+++++++：{}", imageUrl);
         // 1. 参数校验
         if (imageUrl == null || imageUrl.isBlank() || question == null || question.isBlank()) {
             throw new IllegalArgumentException("图片URL和识别问题不能为空");

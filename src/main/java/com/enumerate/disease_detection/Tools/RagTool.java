@@ -1,5 +1,6 @@
 package com.enumerate.disease_detection.Tools;
 
+import com.enumerate.disease_detection.Annotations.ToolName;
 import com.enumerate.disease_detection.ChatModel.MainModel;
 import com.enumerate.disease_detection.POJO.PO.VectorStorePO;
 import com.enumerate.disease_detection.Utils.MysqlEmbeddingStore;
@@ -22,6 +23,7 @@ public class RagTool {
     private MysqlEmbeddingStore mysqlEmbeddingStore;
 
     @Tool("rag工具")
+    @ToolName("rag检索")
     public String ragTool(String prompt) {
         log.info("工具调用: rag工具，参数: prompt={}", prompt);
         
