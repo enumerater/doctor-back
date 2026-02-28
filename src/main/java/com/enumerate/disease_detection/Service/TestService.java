@@ -14,6 +14,9 @@ import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,13 +34,16 @@ public class TestService {
     @Autowired
     private MysqlEmbeddingStore mysqlEmbeddingStore;
 
+
+
+    @Resource(name = "embeddingModel")
+    private OpenAiEmbeddingModel embeddingModel;
+
     public String test() {
         log.info("=== test service start ===");
         // 1. 加载文档
         List<Document> documents = FileSystemDocumentLoader.loadDocuments("./src/main/resources/static");
 
-        // 2. 获取嵌入模型
-        EmbeddingModel embeddingModel = mainModel.embeddingModel();
 
         // 3. 加载/生成向量（优先查库，无则生成并存库，避免浪费token）
         mysqlEmbeddingStore.loadOrSaveEmbedding(embeddingModel, documents);

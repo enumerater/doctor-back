@@ -13,6 +13,7 @@ import com.enumerate.disease_detection.POJO.VO.AnnouncementGenerateVO;
 import com.enumerate.disease_detection.POJO.VO.AnnouncementPageQueryVO;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
+import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,8 +29,10 @@ public class AnnouncementService {
     @Autowired
     private MainModel mainModel;
 
+    @Resource(name = "tongYiModel")
+    private OpenAiChatModel openAiChatModel;
+
     public AnnouncementGenerateVO generateAnnouncement(AnnouncementGenerateDTO announcementGenerateDTO) {
-        OpenAiChatModel openAiChatModel = mainModel.tongYiModel();
 
         AnnouncementGenerate aiServices = AiServices.builder(AnnouncementGenerate.class)
                 .chatModel(openAiChatModel)

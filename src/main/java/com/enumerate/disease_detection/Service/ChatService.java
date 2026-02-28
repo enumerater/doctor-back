@@ -9,11 +9,15 @@ import com.enumerate.disease_detection.POJO.PO.VectorStorePO;
 import com.enumerate.disease_detection.Utils.MysqlEmbeddingStore;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -42,13 +46,21 @@ public class ChatService {
     @Autowired
     private ChatMessageMapper chatMessageMapper;
 
+    @Resource(name = "tongYiStreamingModel")
+    private StreamingChatModel tongYiStreamingModel;
+
+    @Resource(name = "embeddingModel")
+    private OpenAiEmbeddingModel embeddingModel;
+
+    @Resource(name = "deepThinkModel")
+    private StreamingChatModel deepThinkModel;
 
     @Async("aiAsyncExecutor") // 指定使用我们自定义的线程池，精准控制
     public void hello2(SseEmitter emitter, String prompt) {
         try {
-            Assistant assistant = AiServices.create(Assistant.class, mainModel.streamingModel());
+            Assistant assistant = AiServices.create(Assistant.class, tongYiStreamingModel);
 
-            EmbeddingModel embeddingModel = mainModel.embeddingModel();
+
             Embedding queryEmbedding = embeddingModel.embed(prompt).content();
             VectorStorePO mostSimilar = mysqlEmbeddingStore.searchMostSimilar(queryEmbedding);
             String knowledgeContext = mostSimilar.getTextContent() != null ? mostSimilar.getTextContent() : "无知识";
@@ -62,14 +74,14 @@ public class ChatService {
 
     @Async("aiAsyncExecutor") // 指定使用我们自定义的线程池，精准控制
     public void stream(SseEmitter emitter, String prompt) {
-        Assistant assistant = AiServices.create(Assistant.class, mainModel.streamingModel());
+        Assistant assistant = AiServices.create(Assistant.class, tongYiStreamingModel);
         executeStreamWithRetry(() -> assistant.streamChat(prompt), emitter, null);
     }
 
     @Async("aiAsyncExecutor")
     public void deepThink(SseEmitter emitter, String prompt) {
         log.info("开始执行深度思考");
-        Assistant assistant = AiServices.create(Assistant.class, mainModel.deepThinkModel());
+        Assistant assistant = AiServices.create(Assistant.class, deepThinkModel);
         executeStreamWithRetry(() -> assistant.chatStream(prompt), emitter, null);
     }
 
@@ -81,7 +93,7 @@ public class ChatService {
     public void memory(SseEmitter emitter, String prompt, String image, Long userId, Long sessionId) {
         log.info("开始执行记忆对话");
 
-        OpenAiStreamingChatModel model = mainModel.streamingModel();
+        OpenAiStreamingChatModel model = (OpenAiStreamingChatModel) tongYiStreamingModel;
 
         Assistant assistant = AiServices.builder(Assistant.class)
                 .streamingChatModel(model)

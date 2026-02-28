@@ -6,8 +6,11 @@ import com.enumerate.disease_detection.POJO.PO.VectorStorePO;
 import com.enumerate.disease_detection.Utils.MysqlEmbeddingStore;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.service.TokenStream;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -22,12 +25,15 @@ public class RagTool {
     @Autowired
     private MysqlEmbeddingStore mysqlEmbeddingStore;
 
+
+    @Resource(name = "embeddingModel")
+    private OpenAiEmbeddingModel embeddingModel;
+
     @Tool("rag工具")
     @ToolName("rag检索")
     public String ragTool(String prompt) {
         log.info("工具调用: rag工具，参数: prompt={}", prompt);
-        
-        EmbeddingModel embeddingModel = mainModel.embeddingModel();
+
 
         Embedding queryEmbedding = embeddingModel.embed(prompt).content();
 

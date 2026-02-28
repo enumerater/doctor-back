@@ -1,6 +1,5 @@
 package com.enumerate.disease_detection.ChatModel;
 
-
 import com.enumerate.disease_detection.Properties.AiModelProperties;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
@@ -9,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,79 +18,105 @@ public class MainModel {
     @Autowired
     private AiModelProperties aiModelProperties;
 
+    /**
+     * 1. 创建一个强制使用 HTTP/1.1 的通用客户端底座 (免疫假死防断连)
+     */
     @Bean
-    public OpenAiChatModel tongYiModel() {
+    public dev.langchain4j.http.client.HttpClientBuilder langchainHttpClientBuilder() {
+        return dev.langchain4j.http.client.jdk.JdkHttpClient.builder()
+                .httpClientBuilder(
+                        java.net.http.HttpClient.newBuilder()
+                                .version(java.net.http.HttpClient.Version.HTTP_1_1)
+                );
+    }
+
+    /**
+     * 2. 普通同步模型
+     */
+    @Bean
+    public OpenAiChatModel tongYiModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
         return OpenAiChatModel.builder()
                 .apiKey(aiModelProperties.getTong().getApiKey())
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
                 .modelName("qwen-flash")
                 .timeout(Duration.ofSeconds(60))
                 .maxRetries(3)
+                .httpClientBuilder(httpClientBuilder) // 注入！
                 .build();
     }
 
+    /**
+     * 3. 流式模型
+     */
     @Bean
-    public OpenAiEmbeddingModel embeddingModel() {
-        return OpenAiEmbeddingModel.builder()
-                .apiKey(aiModelProperties.getTong().getApiKey())
-                .baseUrl(aiModelProperties.getTong().getBaseUrl())
-                .modelName("text-embedding-v3")
-                .build();
-    }
-
-    @Bean
-    public OpenAiStreamingChatModel streamingModel() {
+    public dev.langchain4j.model.chat.StreamingChatModel tongYiStreamingModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
         return OpenAiStreamingChatModel.builder()
                 .apiKey(aiModelProperties.getTong().getApiKey())
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
                 .modelName("qwen-flash")
                 .timeout(Duration.ofSeconds(60))
+                .httpClientBuilder(httpClientBuilder) // 注入！
                 .build();
     }
 
+    /**
+     * 4. 向量化模型 (Embedding)
+     */
     @Bean
-    public OpenAiStreamingChatModel deepThinkModel() {
-        // 1. 定义深度思考的模型参数（要放在customSettings里）
-        Map<String, Object> modelCustomParams = new HashMap<>();
-        modelCustomParams.put("think", true); // 通义千问开启深度思考的核心参数
+    public OpenAiEmbeddingModel embeddingModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
+        return OpenAiEmbeddingModel.builder()
+                .apiKey(aiModelProperties.getTong().getApiKey())
+                .baseUrl(aiModelProperties.getTong().getBaseUrl())
+                .modelName("text-embedding-v3")
+                .httpClientBuilder(httpClientBuilder) // 注入！防止生成向量时卡死
+                .build();
+    }
 
-        // 2. 正确配置：用customSettings传递模型参数，而非customHeaders
+    /**
+     * 5. 深度思考模型 (流式)
+     */
+    @Bean
+    public OpenAiStreamingChatModel deepThinkModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
+        Map<String, Object> modelCustomParams = new HashMap<>();
+        modelCustomParams.put("think", true);
+
         return OpenAiStreamingChatModel.builder()
                 .apiKey(aiModelProperties.getTong().getApiKey())
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
                 .modelName("qwen-plus")
                 .timeout(Duration.ofSeconds(120))
                 .customParameters(modelCustomParams)
+                .httpClientBuilder(httpClientBuilder) // 注入！
                 .build();
     }
 
+    /**
+     * 6. 视觉模型 (同步)
+     */
     @Bean
-    public OpenAiChatModel visionModel() {
+    public OpenAiChatModel visionModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
         return OpenAiChatModel.builder()
                 .apiKey(aiModelProperties.getTong().getApiKey())
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
-                .modelName("qwen3-vl-plus") // 视觉模型名称，和Python中一致
-                .timeout(Duration.ofSeconds(60)) // 视觉模型响应较慢，延长超时时间
-                .maxRetries(3) // 重试次数
-                .temperature(0.2) // 核心修改：0.2-0.3是平衡稳定与判断灵活性的黄金值
-                .build();
-    }
-
-
-    @Bean
-    public OpenAiChatModel qwen3VlStreamingModel() {
-
-
-        return OpenAiChatModel.builder()
-                // 阿里云通义千问 OpenAI 兼容接口地址
-                .baseUrl(aiModelProperties.getTong().getBaseUrl())
-                // 你的 DASHSCOPE API Key
-                .apiKey(aiModelProperties.getTong().getApiKey())
-                // 模型名称：直接写 qwen3-vl-plus（新版支持自定义模型名）
                 .modelName("qwen3-vl-plus")
-                // 超时时间（按需调整）
-                .timeout(Duration.ofMinutes(5))
+                .timeout(Duration.ofSeconds(60))
+                .maxRetries(3)
+                .temperature(0.2)
+                .httpClientBuilder(httpClientBuilder) // 注入！
                 .build();
     }
 
+    /**
+     * 7. 视觉模型 (流式 - 虽然你这里返回的是 OpenAiChatModel，但我保留了你的命名)
+     */
+    @Bean
+    public OpenAiChatModel qwen3VlStreamingModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
+        return OpenAiChatModel.builder()
+                .baseUrl(aiModelProperties.getTong().getBaseUrl())
+                .apiKey(aiModelProperties.getTong().getApiKey())
+                .modelName("qwen3-vl-plus")
+                .timeout(Duration.ofMinutes(5))
+                .httpClientBuilder(httpClientBuilder) // 注入！
+                .build();
+    }
 }

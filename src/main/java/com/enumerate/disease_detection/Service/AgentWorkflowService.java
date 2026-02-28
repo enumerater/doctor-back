@@ -19,6 +19,7 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.tool.DefaultToolExecutor;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
@@ -126,6 +127,9 @@ public class AgentWorkflowService {
         builtinToolSpecs.addAll(specs);
     }
 
+    @Resource(name = "tongYiModel")
+    private OpenAiChatModel model;
+
     /**
      * 执行ReAct Agent工作流
      *
@@ -138,7 +142,6 @@ public class AgentWorkflowService {
         int msgId = 1;
 
         try {
-            OpenAiChatModel model = mainModel.tongYiModel();
 
             // 收集所有工具规范
             List<ToolSpecification> allToolSpecs = new ArrayList<>(builtinToolSpecs);
