@@ -1,7 +1,7 @@
 package com.enumerate.disease_detection.ModelInterfaces;
 
 
-import com.enumerate.disease_detection.POJO.VO.AnnouncementGenerateVO;
+import com.enumerate.disease_detection.MVC.POJO.VO.AnnouncementGenerateVO;
 import dev.langchain4j.service.SystemMessage;
 
 public interface AnnouncementGenerate {

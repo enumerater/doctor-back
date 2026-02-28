@@ -2,8 +2,8 @@ package com.enumerate.disease_detection.ChatModel;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.enumerate.disease_detection.Mapper.MemoryMapper;
-import com.enumerate.disease_detection.POJO.PO.MemoryPO;
+import com.enumerate.disease_detection.MVC.Mapper.MemoryMapper;
+import com.enumerate.disease_detection.MVC.POJO.PO.MemoryPO;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ChatMessageDeserializer;
 import dev.langchain4j.data.message.ChatMessageSerializer;

@@ -1,7 +1,7 @@
 package com.enumerate.disease_detection.Tools;
 
 import com.enumerate.disease_detection.Annotations.ToolName;
-import com.enumerate.disease_detection.POJO.VO.CropDiseaseAnalysisVO;
+import com.enumerate.disease_detection.MVC.POJO.VO.CropDiseaseAnalysisVO;
 import com.enumerate.disease_detection.Utils.FastApiClientUtil;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;

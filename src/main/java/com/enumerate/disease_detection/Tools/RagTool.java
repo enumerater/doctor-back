@@ -2,14 +2,11 @@ package com.enumerate.disease_detection.Tools;
 
 import com.enumerate.disease_detection.Annotations.ToolName;
 import com.enumerate.disease_detection.ChatModel.MainModel;
-import com.enumerate.disease_detection.POJO.PO.VectorStorePO;
+import com.enumerate.disease_detection.MVC.POJO.PO.VectorStorePO;
 import com.enumerate.disease_detection.Utils.MysqlEmbeddingStore;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.data.embedding.Embedding;
-import dev.langchain4j.model.chat.StreamingChatModel;
-import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
-import dev.langchain4j.service.TokenStream;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

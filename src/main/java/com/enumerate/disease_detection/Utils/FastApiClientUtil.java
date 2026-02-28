@@ -1,6 +1,6 @@
 package com.enumerate.disease_detection.Utils;
 
-import com.enumerate.disease_detection.POJO.VO.CropDiseaseAnalysisVO;
+import com.enumerate.disease_detection.MVC.POJO.VO.CropDiseaseAnalysisVO;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.URI;

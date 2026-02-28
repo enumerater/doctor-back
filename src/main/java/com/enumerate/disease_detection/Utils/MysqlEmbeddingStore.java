@@ -1,8 +1,8 @@
 package com.enumerate.disease_detection.Utils;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.enumerate.disease_detection.Mapper.VectorStoreMapper;
-import com.enumerate.disease_detection.POJO.PO.VectorStorePO;
+import com.enumerate.disease_detection.MVC.Mapper.VectorStoreMapper;
+import com.enumerate.disease_detection.MVC.POJO.PO.VectorStorePO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.document.splitter.DocumentByParagraphSplitter;

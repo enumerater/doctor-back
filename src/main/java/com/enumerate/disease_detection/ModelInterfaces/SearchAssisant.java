@@ -1,6 +1,6 @@
 package com.enumerate.disease_detection.ModelInterfaces;
 
-import com.enumerate.disease_detection.POJO.VO.MergeTemHum;
+import com.enumerate.disease_detection.MVC.POJO.VO.MergeTemHum;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 

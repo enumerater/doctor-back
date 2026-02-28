@@ -1,6 +1,6 @@
 package com.enumerate.disease_detection.ModelInterfaces;
 
-import com.enumerate.disease_detection.POJO.VO.VisionVO;
+import com.enumerate.disease_detection.MVC.POJO.VO.VisionVO;
 import dev.langchain4j.service.SystemMessage;
 
 public interface VisionAssisant {
