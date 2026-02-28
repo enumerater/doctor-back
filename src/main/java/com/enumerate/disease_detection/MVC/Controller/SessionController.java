@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.enumerate.disease_detection.Common.Result;
 import com.enumerate.disease_detection.Local.UserContextHolder;
 import com.enumerate.disease_detection.MVC.Mapper.SessionMapper;
+import com.enumerate.disease_detection.MVC.Mapper.UserMapper;
 import com.enumerate.disease_detection.MVC.POJO.DTO.ChatSessionDTO;
 
 import com.enumerate.disease_detection.MVC.POJO.PO.ChatSessionPO;
+import com.enumerate.disease_detection.MVC.POJO.PO.UserPO;
 import com.enumerate.disease_detection.MVC.POJO.VO.SessionVO;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +26,9 @@ import java.util.List;
 public class SessionController {
     @Autowired
     private SessionMapper sessionMapper;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @GetMapping
     @CrossOrigin
@@ -74,6 +80,18 @@ public class SessionController {
         chatSessionPO.setSessionId(chatSessionDTO.getSessionId());
 
         sessionMapper.insert(chatSessionPO);
+
+        //更新User
+        // 核心提取逻辑
+        String sessionId = null;
+        if (chatSessionDTO.getSessionId().startsWith(String.valueOf(UserContextHolder.getUserId()))) { // 先校验userId是否在开头，避免异常
+            // 从userId长度的位置开始截取，直到字符串末尾
+            sessionId = chatSessionDTO.getSessionId().substring(String.valueOf(UserContextHolder.getUserId()).length());
+        } else {
+            System.out.println("错误：拼接字符串不以该userId开头");
+        }
+        userMapper.update(new UpdateWrapper<UserPO>().eq("id",UserContextHolder.getUserId()).set("session_id",sessionId));
+
         return Result.success("创建成功");
     }
 

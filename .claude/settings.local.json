@@ -23,7 +23,8 @@
       "Bash(curl:*)",
       "Bash(grep langchain4j:*)",
       "Bash(cd:*)",
-      "Bash(cd \"E:/java_main/codes/disease_detection\" && javap -p -classpath \"E:/java_main/mvn-repository/dev/langchain4j/langchain4j-core/1.10.0/langchain4j-core-1.10.0.jar\" \"dev.langchain4j.model.chat.request.json.JsonObjectSchema\\\\$Builder\" 2>&1)"
+      "Bash(cd \"E:/java_main/codes/disease_detection\" && javap -p -classpath \"E:/java_main/mvn-repository/dev/langchain4j/langchain4j-core/1.10.0/langchain4j-core-1.10.0.jar\" \"dev.langchain4j.model.chat.request.json.JsonObjectSchema\\\\$Builder\" 2>&1)",
+      "Bash(./mvnw compile:*)"
     ]
   }
 }

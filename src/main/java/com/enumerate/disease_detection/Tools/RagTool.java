@@ -1,47 +1,50 @@
 package com.enumerate.disease_detection.Tools;
 
 import com.enumerate.disease_detection.Annotations.ToolName;
-import com.enumerate.disease_detection.ChatModel.MainModel;
-import com.enumerate.disease_detection.MVC.POJO.PO.VectorStorePO;
 import com.enumerate.disease_detection.Utils.MysqlEmbeddingStore;
+import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 
-
+@Slf4j
 @Component
 public class RagTool {
 
     @Autowired
-    private MainModel mainModel;
-
-    @Autowired
     private MysqlEmbeddingStore mysqlEmbeddingStore;
-
 
     @Resource(name = "embeddingModel")
     private OpenAiEmbeddingModel embeddingModel;
 
-    @Tool("rag工具")
-    @ToolName("rag检索")
-    public String ragTool(String prompt) {
-        log.info("工具调用: rag工具，参数: prompt={}", prompt);
+    @Tool("用户记忆检索工具：根据查询内容搜索该用户的历史记忆信息，返回与查询最相关的记忆条目。当需要了解用户的个人情况、种植习惯、历史问题等个性化信息时调用。")
+    @ToolName("用户记忆检索")
+    public String userMemorySearch(@P("查询内容，描述你想了解的用户信息") String query,
+                                   @P("用户ID") String userId) {
+        log.info("工具调用: 用户记忆检索，参数: query={}, userId={}", query, userId);
 
+        Embedding queryEmbedding = embeddingModel.embed(query).content();
+        List<String> memories = mysqlEmbeddingStore.searchTopNForUser(userId, queryEmbedding, 5, 0.5f);
 
-        Embedding queryEmbedding = embeddingModel.embed(prompt).content();
+        if (memories.isEmpty()) {
+            String result = "暂无该用户的相关记忆信息。";
+            log.info("工具结果: 用户记忆检索，结果: {}", result);
+            return result;
+        }
 
-        // 5. 相似度搜索（从MySQL中找最相似的向量）
-        VectorStorePO mostSimilar = mysqlEmbeddingStore.searchMostSimilar(queryEmbedding);
-        String result = mostSimilar.getTextContent() != null ? mostSimilar.getTextContent() : "无知识";
-        
-        log.info("工具结果: rag工具，结果: {}", result);
+        StringBuilder sb = new StringBuilder("用户相关记忆：\n");
+        for (int i = 0; i < memories.size(); i++) {
+            sb.append(i + 1).append(". ").append(memories.get(i)).append("\n");
+        }
+
+        String result = sb.toString();
+        log.info("工具结果: 用户记忆检索，命中{}条", memories.size());
         return result;
     }
-    
-    // 使用Slf4j日志记录
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RagTool.class);
 }

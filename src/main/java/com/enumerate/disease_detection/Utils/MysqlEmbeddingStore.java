@@ -5,90 +5,88 @@ import com.enumerate.disease_detection.MVC.Mapper.VectorStoreMapper;
 import com.enumerate.disease_detection.MVC.POJO.PO.VectorStorePO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.langchain4j.data.document.splitter.DocumentByParagraphSplitter;
 import dev.langchain4j.data.embedding.Embedding;
-import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 基于MySQL的向量存储服务（替代InMemoryEmbeddingStore）
+ * 基于MySQL的用户记忆向量存储服务
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class MysqlEmbeddingStore {
 
-    private final ObjectMapper objectMapper; // Jackson工具，用于JSON和数组互转
+    private final ObjectMapper objectMapper;
 
     @Autowired
     private VectorStoreMapper vectorStoreMapper;
 
+    @Resource(name = "embeddingModel")
+    private OpenAiEmbeddingModel embeddingModel;
+
     /**
-     * 加载/生成向量：优先查库，无则生成并存库
+     * 向量化一条用户记忆并存储到MySQL
+     *
+     * @param userId          用户ID
+     * @param memoryText      记忆文本
+     * @param sourceSessionId 来源会话ID
+     * @param memoryType      记忆类型
      */
-    public void loadOrSaveEmbedding(EmbeddingModel embeddingModel, List<dev.langchain4j.data.document.Document> documents) {
-         // 1. 创建分词器：
-         DocumentByParagraphSplitter splitter = new DocumentByParagraphSplitter(800, 20);
+    public void saveUserMemory(Long userId, String memoryText, String sourceSessionId, String memoryType) {
+        Embedding embedding = embeddingModel.embed(memoryText).content();
 
-        for (dev.langchain4j.data.document.Document doc : documents) {
-            String docPath = doc.metadata().getString("file_name"); // 获取文档路径（唯一标识）
-            // 1. 查数据库：判断该文档是否已生成过向量
-            boolean exists = vectorStoreMapper.exists(new QueryWrapper<VectorStorePO>().eq("document_path", docPath));
-            if (exists) {
-                log.info("文档{}已存在向量，无需重复生成", docPath);
-                continue;
-            }
-
-            // 2. 未存在：生成向量并入库
-            log.info("文档{}未生成向量，开始生成并入库", docPath);
-            List<TextSegment> split = splitter.split(doc);
-            for (TextSegment textSegment : split){
-
-                Embedding embedding = embeddingModel.embed(textSegment).content();
-
-                // 3. 向量转JSON字符串（存入数据库）
-                String embeddingJson;
-                try {
-                    embeddingJson = objectMapper.writeValueAsString(embedding.vector());
-                } catch (JsonProcessingException e) {
-                    log.error("向量转JSON失败", e);
-                    throw new RuntimeException("向量序列化失败", e);
-                }
-
-                // 4. 保存到MySQL
-                log.info("文档{}生成向量成功，开始入库", docPath);
-                VectorStorePO vectorStorePO = VectorStorePO.builder()
-                        .documentPath(docPath)
-                        .textContent(textSegment.text())
-                        .embedding(embeddingJson)
-                        .build();
-                vectorStoreMapper.insert(vectorStorePO);
-            }
+        String embeddingJson;
+        try {
+            embeddingJson = objectMapper.writeValueAsString(embedding.vector());
+        } catch (JsonProcessingException e) {
+            log.error("向量转JSON失败", e);
+            throw new RuntimeException("向量序列化失败", e);
         }
+
+        VectorStorePO po = VectorStorePO.builder()
+                .userId(userId)
+                .textContent(memoryText)
+                .embedding(embeddingJson)
+                .memoryType(memoryType)
+                .sourceSessionId(sourceSessionId)
+                .createdAt(LocalDateTime.now())
+                .build();
+        vectorStoreMapper.insert(po);
+        log.info("用户{}记忆已入库: {}", userId, memoryText.substring(0, Math.min(50, memoryText.length())));
     }
 
     /**
-     * 相似度搜索：计算查询向量与库中所有向量的余弦相似度，返回最相似的结果
-     * （注：MySQL 8.0.31+可直接用内置函数计算，这里是通用实现）
+     * 按用户过滤，返回Top-N相似记忆文本
+     *
+     * @param userId         用户ID
+     * @param queryEmbedding 查询向量
+     * @param topN           返回条数
+     * @param minScore       最低相似度阈值
+     * @return 相似记忆文本列表
      */
-    public VectorStorePO searchMostSimilar(Embedding queryEmbedding) {
-        List<VectorStorePO> allVectors = vectorStoreMapper.selectList(new QueryWrapper<>());
-        if (allVectors.isEmpty()) {
-            throw new RuntimeException("向量库为空，请先加载文档");
+    public List<String> searchTopNForUser(String userId, Embedding queryEmbedding, int topN, float minScore) {
+        List<VectorStorePO> userVectors = vectorStoreMapper.selectList(
+                new QueryWrapper<VectorStorePO>().eq("user_id", userId)
+        );
+
+        if (userVectors.isEmpty()) {
+            return List.of();
         }
 
-        VectorStorePO mostSimilar = null;
-        float maxScore = -1;
-        float[] queryVector =  queryEmbedding.vector();
+        float[] queryVector = queryEmbedding.vector();
 
-        for (VectorStorePO entity : allVectors) {
-            // 1. 数据库中的JSON向量转double数组
+        // 计算相似度并排序
+        List<ScoredMemory> scoredList = new ArrayList<>();
+        for (VectorStorePO entity : userVectors) {
             float[] docVector;
             try {
                 docVector = objectMapper.readValue(entity.getEmbedding(), float[].class);
@@ -97,23 +95,25 @@ public class MysqlEmbeddingStore {
                 continue;
             }
 
-            // 2. 计算余弦相似度（核心：值越大，相似度越高）
             float score = (float) cosineSimilarity(queryVector, docVector);
-            if (score > maxScore) {
-                maxScore =  score;
-                mostSimilar = entity;
+            if (score >= minScore) {
+                scoredList.add(new ScoredMemory(entity.getTextContent(), score));
             }
         }
 
-        if (mostSimilar == null) {
-            throw new RuntimeException("未找到相似向量");
+        scoredList.sort((a, b) -> Float.compare(b.score, a.score));
+
+        List<String> results = new ArrayList<>();
+        for (int i = 0; i < Math.min(topN, scoredList.size()); i++) {
+            results.add(scoredList.get(i).text);
         }
-        log.info("最相似文档相似度：{}", maxScore);
-        return mostSimilar;
+
+        log.info("用户{}记忆检索完成，命中{}条（总{}条）", userId, results.size(), userVectors.size());
+        return results;
     }
 
     /**
-     * 余弦相似度计算（核心算法：衡量两个向量的相似程度）
+     * 余弦相似度计算
      */
     private double cosineSimilarity(float[] vec1, float[] vec2) {
         if (vec1.length != vec2.length) {
@@ -129,4 +129,6 @@ public class MysqlEmbeddingStore {
         }
         return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
     }
+
+    private record ScoredMemory(String text, float score) {}
 }

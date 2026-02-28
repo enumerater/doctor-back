@@ -1,19 +1,15 @@
 package com.enumerate.disease_detection.MVC.Service;
 
 import com.enumerate.disease_detection.MVC.POJO.PO.ChatMessagePO;
-import com.enumerate.disease_detection.MVC.POJO.PO.VectorStorePO;
 import com.enumerate.disease_detection.ModelInterfaces.Assistant;
 import com.enumerate.disease_detection.ChatModel.MainModel;
 import com.enumerate.disease_detection.ChatModel.PersistentChatMemoryStore;
 import com.enumerate.disease_detection.MVC.Mapper.ChatMessageMapper;
 
 import com.enumerate.disease_detection.Properties.AiModelProperties;
-import com.enumerate.disease_detection.Utils.MysqlEmbeddingStore;
-import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
-import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
@@ -41,16 +37,10 @@ public class ChatService {
     private MainModel mainModel;
 
     @Autowired
-    private MysqlEmbeddingStore mysqlEmbeddingStore;
-
-    @Autowired
     private ChatMessageMapper chatMessageMapper;
 
     @Resource(name = "tongYiStreamingModel")
     private StreamingChatModel tongYiStreamingModel;
-
-    @Resource(name = "embeddingModel")
-    private OpenAiEmbeddingModel embeddingModel;
 
     @Resource(name = "deepThinkModel")
     private StreamingChatModel deepThinkModel;
@@ -67,23 +57,6 @@ public class ChatService {
     @Resource(name = "deepseekStreamingModel")
     private StreamingChatModel deepseekStreamingModel;
 
-
-    @Async("aiAsyncExecutor") // 指定使用我们自定义的线程池，精准控制
-    public void hello2(SseEmitter emitter, String prompt) {
-        try {
-            Assistant assistant = AiServices.create(Assistant.class, tongYiStreamingModel);
-
-
-            Embedding queryEmbedding = embeddingModel.embed(prompt).content();
-            VectorStorePO mostSimilar = mysqlEmbeddingStore.searchMostSimilar(queryEmbedding);
-            String knowledgeContext = mostSimilar.getTextContent() != null ? mostSimilar.getTextContent() : "无知识";
-
-            executeStreamWithRetry(() -> assistant.ragChat(knowledgeContext, prompt), emitter, null);
-        } catch (Exception e) {
-            log.error("AI流式请求初始化失败", e);
-            emitter.completeWithError(e);
-        }
-    }
 
     @Async("aiAsyncExecutor") // 指定使用我们自定义的线程池，精准控制
     public void stream(SseEmitter emitter, String prompt) {
