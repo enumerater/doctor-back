@@ -18,6 +18,8 @@ public class AiModelProperties {
     // 通义千问模型配置
     private TongYi tong;
 
+    private Deepseek deepseek;
+
     // 通用配置内部类
     @Data
     public static class CommonConfig {
@@ -31,6 +33,14 @@ public class AiModelProperties {
         private String apiKey;
         private String baseUrl;
         private String modelName;
+    }
+
+    @Data
+    public static class Deepseek {
+        private String apiKey;
+        private String baseUrl;
+        private String modelNameDeepseekChat;
+        private String modelNameDeepseekReasoner;
     }
 
 }

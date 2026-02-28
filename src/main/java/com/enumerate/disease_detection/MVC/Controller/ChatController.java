@@ -77,7 +77,7 @@ public class ChatController {
             allowedHeaders = "*", // 允许所有请求头
             methods = {GET, OPTIONS} // 显式指定请求方法
     )
-    public SseEmitter memory(HttpServletResponse response, @RequestParam String prompt, @RequestParam String image, @RequestParam Long userId, @RequestParam Long sessionId) {
+    public SseEmitter memory(HttpServletResponse response, @RequestParam String prompt, @RequestParam String image, @RequestParam Long userId, @RequestParam Long sessionId, @RequestParam String model) {
         // ========== 1. 配置【流式必备的3个核心响应头】，缺一不可 ==========
         response.setContentType("text/event-stream;charset=UTF-8"); // 声明SSE流式格式
         response.setHeader("Cache-Control", "no-cache"); // 禁止客户端缓存，防止分片错乱
@@ -85,7 +85,7 @@ public class ChatController {
 
         // ========== 2. 创建流式发射器，设置超时时间60秒（按需调整） =========
         SseEmitter emitter = new SseEmitter(60 * 1000L);
-        chatService.memory(emitter, prompt, image, userId, sessionId);
+        chatService.memory(emitter, prompt, image, userId, sessionId,model);
         return emitter;
     }
 

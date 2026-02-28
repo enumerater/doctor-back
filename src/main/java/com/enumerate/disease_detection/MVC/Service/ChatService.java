@@ -7,6 +7,7 @@ import com.enumerate.disease_detection.ChatModel.MainModel;
 import com.enumerate.disease_detection.ChatModel.PersistentChatMemoryStore;
 import com.enumerate.disease_detection.MVC.Mapper.ChatMessageMapper;
 
+import com.enumerate.disease_detection.Properties.AiModelProperties;
 import com.enumerate.disease_detection.Utils.MysqlEmbeddingStore;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
@@ -54,6 +55,19 @@ public class ChatService {
     @Resource(name = "deepThinkModel")
     private StreamingChatModel deepThinkModel;
 
+    @Resource(name = "tongYiPlusStreamingModel")
+    private StreamingChatModel tongYiPlusStreamingModel;
+
+    @Resource(name = "tongYiFlashStreamingModel")
+    private StreamingChatModel tongYiFlashStreamingModel;
+
+    @Resource(name = "GlmStreamingModel")
+    private StreamingChatModel GlmStreamingModel;
+
+    @Resource(name = "deepseekStreamingModel")
+    private StreamingChatModel deepseekStreamingModel;
+
+
     @Async("aiAsyncExecutor") // 指定使用我们自定义的线程池，精准控制
     public void hello2(SseEmitter emitter, String prompt) {
         try {
@@ -89,10 +103,18 @@ public class ChatService {
 
 
     @Async
-    public void memory(SseEmitter emitter, String prompt, String image, Long userId, Long sessionId) {
+    public void memory(SseEmitter emitter, String prompt, String image, Long userId, Long sessionId,String modelName) {
         log.info("开始执行记忆对话");
 
-        OpenAiStreamingChatModel model = (OpenAiStreamingChatModel) tongYiStreamingModel;
+        StreamingChatModel model = switch (modelName) {
+            case "qwen-flash" -> tongYiStreamingModel;
+            case "qwen3.5-flash" -> (OpenAiStreamingChatModel) tongYiFlashStreamingModel;
+            case "qwen3.5-plus" -> (OpenAiStreamingChatModel) tongYiPlusStreamingModel;
+            case "DeepSeek-V3.2" -> (OpenAiStreamingChatModel) deepseekStreamingModel;
+            case "glm-5" -> (OpenAiStreamingChatModel) GlmStreamingModel;
+            default -> (OpenAiStreamingChatModel) tongYiStreamingModel;
+        };
+
 
         Assistant assistant = AiServices.builder(Assistant.class)
                 .streamingChatModel(model)

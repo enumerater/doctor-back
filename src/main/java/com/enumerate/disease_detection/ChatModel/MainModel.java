@@ -1,6 +1,7 @@
 package com.enumerate.disease_detection.ChatModel;
 
 import com.enumerate.disease_detection.Properties.AiModelProperties;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
@@ -45,15 +46,79 @@ public class MainModel {
                 .build();
     }
 
+    @Bean
+    public OpenAiChatModel deepseekModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
+        return OpenAiChatModel.builder()
+                .apiKey(aiModelProperties.getDeepseek().getApiKey())
+                .baseUrl(aiModelProperties.getDeepseek().getBaseUrl())
+                .modelName(aiModelProperties.getDeepseek().getModelNameDeepseekChat())
+                .timeout(Duration.ofSeconds(60))
+                .maxRetries(3)
+                .httpClientBuilder(httpClientBuilder) // 注入！
+                .build();
+    }
+
+
     /**
      * 3. 流式模型
      */
+    //qwen-flash
     @Bean
     public dev.langchain4j.model.chat.StreamingChatModel tongYiStreamingModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
         return OpenAiStreamingChatModel.builder()
                 .apiKey(aiModelProperties.getTong().getApiKey())
                 .baseUrl(aiModelProperties.getTong().getBaseUrl())
                 .modelName("qwen-flash")
+                .timeout(Duration.ofSeconds(60))
+                .httpClientBuilder(httpClientBuilder) // 注入！
+                .build();
+    }
+
+    //qwen3.5-plus
+    @Bean
+    public dev.langchain4j.model.chat.StreamingChatModel tongYiPlusStreamingModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
+        return OpenAiStreamingChatModel.builder()
+                .apiKey(aiModelProperties.getTong().getApiKey())
+                .baseUrl(aiModelProperties.getTong().getBaseUrl())
+                .modelName("qwen3.5-plus")
+                .timeout(Duration.ofSeconds(60))
+                .httpClientBuilder(httpClientBuilder) // 注入！
+                .build();
+    }
+
+    //qwen3.5-flash
+    @Bean
+    public dev.langchain4j.model.chat.StreamingChatModel tongYiFlashStreamingModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
+        return OpenAiStreamingChatModel.builder()
+                .apiKey(aiModelProperties.getTong().getApiKey())
+                .baseUrl(aiModelProperties.getTong().getBaseUrl())
+                .modelName("qwen3.5-flash")
+                .timeout(Duration.ofSeconds(60))
+                .httpClientBuilder(httpClientBuilder) // 注入！
+                .build();
+    }
+
+
+
+    //glm-5
+    @Bean
+    public dev.langchain4j.model.chat.StreamingChatModel GlmStreamingModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
+        return OpenAiStreamingChatModel.builder()
+                .apiKey(aiModelProperties.getTong().getApiKey())
+                .baseUrl(aiModelProperties.getTong().getBaseUrl())
+                .modelName("glm-5")
+                .timeout(Duration.ofSeconds(60))
+                .httpClientBuilder(httpClientBuilder) // 注入！
+                .build();
+    }
+
+    //DeepSeek-V3.2
+    @Bean
+    public StreamingChatModel deepseekStreamingModel(dev.langchain4j.http.client.HttpClientBuilder httpClientBuilder) {
+        return OpenAiStreamingChatModel.builder()
+                .apiKey(aiModelProperties.getDeepseek().getApiKey())
+                .baseUrl(aiModelProperties.getDeepseek().getBaseUrl())
+                .modelName(aiModelProperties.getDeepseek().getModelNameDeepseekChat())
                 .timeout(Duration.ofSeconds(60))
                 .httpClientBuilder(httpClientBuilder) // 注入！
                 .build();
