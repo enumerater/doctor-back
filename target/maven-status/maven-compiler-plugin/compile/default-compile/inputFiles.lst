@@ -47,7 +47,6 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\DiseasesMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\FarmMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\FeedbackMapper.java
-E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\LongMemoryMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\MemoryMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\MemoryProcessLogMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\NotificationMapper.java
@@ -95,7 +94,6 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\DiseasesPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\FarmPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\FeedbackPO.java
-E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\LongMemory.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\MemoryPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\MemoryProcessLogPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\NotificationPO.java
