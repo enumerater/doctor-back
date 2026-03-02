@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -63,7 +64,10 @@ public class AgentWorkflowService {
     @Autowired
     private ChatMessageMapper chatMessageMapper;
 
-    /** 内置 @Tool Bean 提取的 ToolSpecification 列表 */
+    @Autowired
+    private com.enumerate.disease_detection.ChatModel.PersistentChatMemoryStore persistentChatMemoryStore;
+
+    /** 内置 @Tool Bean 提取的 Tool Specification 列表 */
     private final List<ToolSpecification> builtinToolSpecs = new ArrayList<>();
 
     /** 内置工具执行器：toolName -> DefaultToolExecutor */
@@ -267,12 +271,15 @@ public class AgentWorkflowService {
                 - **查询农场信息**: 当用户询问自己的农场、地块信息时调用
                 - **搜索病害知识**: 当需要查找特定病害的详细信息和防治方法时调用
                 - **联网搜索**: 当需要最新的实时信息（政策、新闻、市场等）时调用
+                - **发起确认**: 当你发现用户有执行某项敏感操作（如：创建农场、删除记录）的意图时，必须先调用此工具向用户发起询问确认，得到同意后才能继续执行后续操作
+                - **创建农场**: 当用户同意创建农场后，调用此工具将农场信息插入数据库
                 
                 "1. **主动决策**：当用户提问需要实时信息（如天气、新闻、作物价格）时，请主动调用 `联网搜索` 工具，不要等待用户下指令。",
                 "2. **智能补全**：如果用户提问缺少关键背景（例如问‘今天天气怎么样’但没说地点），请先调用 `用户记忆检索` 检索用户以往的背景信息，或调用 `查询农场信息` 查看其农场位置。",
-                "3. **身份意识**：当前用户的ID是 {{userId}}。在调用任何需要 userId 或 userId 参数的工具时，请务必直接使用这个ID。",
-                "4. **专业风格**：你依然是一名农学专家，回答应简洁、专业、易懂。对于不确定的信息，优先查工具，工具查不到再询问用户。",
-                "5. **多步思考**：如果需要，你可以连续调用多个工具（例如：先查记忆得到地点，再联网查天气）。"
+                "3. **身份意识**：当前用户的ID是 {{userId}}。在调用任何需要 userId 参数的工具时，请务必直接使用这个ID。",
+                "4. **双向互动**：如果你识别到用户想要'管理田间'、'记录农场'或直接说'我想创建一个农场'，请先思考是否已有该农场信息。如果没有，主动调用 `发起确认` 工具询问用户是否需要创建一个。如果用户同意，再通过对话引导用户提供农场名称、位置、面积等信息，最后调用 `创建农场` 工具完成操作。",
+                "5. **专业风格**：你依然是一名农学专家，回答应简洁、专业、易懂。对于不确定的信息，优先查工具，工具查不到再询问用户。",
+                "6. **多步思考**：如果需要，你可以连续调用多个工具（例如：先查记忆得到地点，再联网查天气）。"
     
 
                 ## 个性化服务
@@ -316,6 +323,120 @@ public class AgentWorkflowService {
 
     // ========== SSE 事件发送 ==========
 
+    /**
+     * 执行ReAct Agent工作流 (WebSocket版)
+     */
+    @Async
+    public void executeWs(WebSocketSession session, String input, Long userId) {
+        int msgId = 1;
+        com.enumerate.disease_detection.Local.SessionHolder.setSession(session);
+
+        // 1. 获取该用户的 ChatMemory
+        String memoryId = "agent_" + userId;
+        dev.langchain4j.memory.ChatMemory chatMemory = dev.langchain4j.memory.chat.MessageWindowChatMemory.builder()
+                .maxMessages(20)
+                .chatMemoryStore(persistentChatMemoryStore)
+                .id(memoryId)
+                .build();
+
+        try {
+            // 2. 添加用户输入到记忆
+            chatMemory.add(UserMessage.from(input));
+
+            List<ToolSpecification> allToolSpecs = new ArrayList<>(builtinToolSpecs);
+
+            // 3. 构造包含历史记录和系统提示的消息列表
+            List<ChatMessage> messages = new ArrayList<>();
+            messages.add(SystemMessage.from(buildSystemPrompt(userId)));
+            messages.addAll(chatMemory.messages());
+
+            sendStatusEvent(session, msgId++, "thinking", "正在分析您的问题...");
+
+            for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
+                ChatRequest request = ChatRequest.builder()
+                        .messages(messages)
+                        .toolSpecifications(allToolSpecs)
+                        .build();
+
+                ChatResponse response = model.chat(request);
+                AiMessage aiMessage = response.aiMessage();
+                messages.add(aiMessage);
+                chatMemory.add(aiMessage); // 同步到记忆
+
+                if (aiMessage.text() != null && !aiMessage.text().isBlank()) {
+                    if (aiMessage.hasToolExecutionRequests()) {
+                        sendDataEvent(session, msgId++, "thought", aiMessage.text());
+                    } else {
+                        sendStatusEvent(session, msgId++, "completed", "回答完成");
+                        sendDataEvent(session, msgId++, "final_result", aiMessage.text());
+                        return;
+                    }
+                }
+
+                if (aiMessage.hasToolExecutionRequests()) {
+                    for (ToolExecutionRequest toolRequest : aiMessage.toolExecutionRequests()) {
+                        String toolName = toolRequest.name();
+                        sendStatusEvent(session, msgId++, "tool_calling",
+                                String.format("正在调用工具: %s", toolName));
+
+                        String result;
+                        try {
+                            if (builtinExecutors.containsKey(toolName)) {
+                                result = builtinExecutors.get(toolName).execute(toolRequest, null);
+                            } else {
+                                result = "未找到工具: " + toolName;
+                            }
+                        } catch (Exception e) {
+                            log.error("工具执行失败: {}", toolName, e);
+                            result = "工具执行失败: " + e.getMessage();
+                        }
+
+                        sendDataEvent(session, msgId++, "observation", truncateResult(result));
+                        ToolExecutionResultMessage resultMessage = ToolExecutionResultMessage.from(toolRequest, result);
+                        messages.add(resultMessage);
+                        chatMemory.add(resultMessage); // 同步到记忆
+                    }
+                } else {
+                    sendStatusEvent(session, msgId++, "completed", "回答完成");
+                    sendDataEvent(session, msgId++, "final_result", "抱歉，无法生成有效回答。");
+                    return;
+                }
+            }
+            sendStatusEvent(session, msgId++, "completed", "已达到最大推理步数");
+            String lastText = extractLastAiText(messages);
+            sendDataEvent(session, msgId++, "final_result", lastText != null ? lastText : "推理结束。");
+
+        } catch (Exception e) {
+            log.error("ReAct Agent执行失败", e);
+            sendStatusEvent(session, msgId++, "error", "执行出错: " + e.getMessage());
+        } finally {
+            com.enumerate.disease_detection.Local.SessionHolder.removeSession();
+        }
+    }
+
+    private void sendStatusEvent(WebSocketSession session, int id, String status, String message) {
+        if (session == null) return;
+        com.enumerate.disease_detection.MVC.Controller.ChatWebSocketHandler.sendMessage(session, Map.of(
+                "type", "status",
+                "id", id,
+                "status", status,
+                "message", message,
+                "timestamp", System.currentTimeMillis()
+        ));
+    }
+
+    private void sendDataEvent(WebSocketSession session, int id, String type, String content) {
+        if (session == null) return;
+        com.enumerate.disease_detection.MVC.Controller.ChatWebSocketHandler.sendMessage(session, Map.of(
+                "type", "data",
+                "id", id,
+                "dataType", type,
+                "content", content,
+                "timestamp", System.currentTimeMillis()
+        ));
+    }
+
+    // Existing methods for SSE...
     private void sendStatusEvent(SseEmitter emitter, int id, String status, String message) {
         try {
             SseEmitter.SseEventBuilder event = SseEmitter.event()
