@@ -12,12 +12,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("kg_links")
-public class KgLinksPO {
+@TableName("pesticide")
+public class PesticidePO {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String sourceId;
-    private String targetId;
-    private String relation;
-    private String cropName;
+    private String name;
+    private String category;
+    private String function;
+    private String usageLimit;
 }

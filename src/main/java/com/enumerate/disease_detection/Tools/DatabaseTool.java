@@ -41,12 +41,14 @@ public class DatabaseTool {
     @Autowired
     private KnowledgeService knowledgeService;
 
-    @Tool("搜索农业知识图谱，查找特定关键词及其关联的知识点（如作物、病害、药剂、节气等）。当需要了解节点之间的关系或进行深度关联分析时调用。")
+    @Tool("搜索农业知识图谱，查找特定作物（如柑橘）下的关键词及其关联的知识点（如病害、药剂、节气等）。当需要了解节点之间的关系或进行深度关联分析时调用。")
     @ToolName("搜索知识图谱")
-    public String searchKnowledgeGraph(@P("关键词") String keyword) {
-        log.info("工具调用: 搜索知识图谱, keyword={}", keyword);
+    public String searchKnowledgeGraph(
+            @P("作物名称，如：柑橘") String cropName,
+            @P("搜索关键词，如：病害名、药剂名") String keyword) {
+        log.info("工具调用: 搜索知识图谱, cropName={}, keyword={}", cropName, keyword);
 
-        KgGraphVO graph = knowledgeService.getKnowledgeGraph(keyword, null, 2);
+        KgGraphVO graph = knowledgeService.getKnowledgeGraph(cropName, keyword, null, 2);
 
         if (graph.getNodes().isEmpty()) {
             return "在知识图谱中未找到与\"" + keyword + "\"相关的节点。";

@@ -19,4 +19,5 @@ public class KgNodesPO {
     private String type;
     private Integer value;
     private String details;
+    private String cropName;
 }

@@ -26,19 +26,29 @@ public class KnowledgeController {
 
     @GetMapping("/graph")
     public Result<KgGraphVO> getKnowledgeGraph(
+            @RequestParam(required = false) String cropName,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) List<String> categories,
             @RequestParam(defaultValue = "2") Integer depth) {
-        log.info("=== getKnowledgeGraph: keyword={}, categories={}, depth={} ===", keyword, categories, depth);
-        KgGraphVO res = knowledgeService.getKnowledgeGraph(keyword, categories, depth);
+        log.info("=== getKnowledgeGraph: cropName={}, keyword={}, categories={}, depth={} ===", cropName, keyword, categories, depth);
+        KgGraphVO res = knowledgeService.getKnowledgeGraph(cropName, keyword, categories, depth);
         return Result.success(res);
     }
 
     @GetMapping("/graph/suggest")
-    public Result<List<String>> suggestNodes(@RequestParam String q) {
-        log.info("=== suggestNodes: q={} ===", q);
-        List<String> suggestions = knowledgeService.getSuggestNodes(q);
+    public Result<List<String>> suggestNodes(
+            @RequestParam String q,
+            @RequestParam(required = false) String cropName) {
+        log.info("=== suggestNodes: q={}, cropName={} ===", q, cropName);
+        List<String> suggestions = knowledgeService.getSuggestNodes(q, cropName);
         return Result.success(suggestions);
+    }
+
+    @PostMapping("/sync")
+    public Result<String> triggerSync() {
+        log.info("=== triggerSync ===");
+        knowledgeService.syncKnowledgeGraph();
+        return Result.success("同步任务已在后台启动，请稍后刷新图谱。");
     }
 
 
