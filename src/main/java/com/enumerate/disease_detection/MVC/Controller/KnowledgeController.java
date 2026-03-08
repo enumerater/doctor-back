@@ -7,13 +7,13 @@ import com.enumerate.disease_detection.MVC.POJO.PO.DiseasesPO;
 import com.enumerate.disease_detection.MVC.POJO.VO.CropListVO;
 import com.enumerate.disease_detection.MVC.POJO.VO.DiseasesPageResult;
 
+import com.enumerate.disease_detection.MVC.POJO.VO.KgGraphVO;
 import com.enumerate.disease_detection.MVC.Service.KnowledgeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/knowledge")
@@ -23,6 +23,23 @@ public class KnowledgeController {
 
     @Autowired
     private KnowledgeService knowledgeService;
+
+    @GetMapping("/graph")
+    public Result<KgGraphVO> getKnowledgeGraph(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) List<String> categories,
+            @RequestParam(defaultValue = "2") Integer depth) {
+        log.info("=== getKnowledgeGraph: keyword={}, categories={}, depth={} ===", keyword, categories, depth);
+        KgGraphVO res = knowledgeService.getKnowledgeGraph(keyword, categories, depth);
+        return Result.success(res);
+    }
+
+    @GetMapping("/graph/suggest")
+    public Result<List<String>> suggestNodes(@RequestParam String q) {
+        log.info("=== suggestNodes: q={} ===", q);
+        List<String> suggestions = knowledgeService.getSuggestNodes(q);
+        return Result.success(suggestions);
+    }
 
 
     @GetMapping("/crops")

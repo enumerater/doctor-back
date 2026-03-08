@@ -1,19 +1,27 @@
 package com.enumerate.disease_detection.MVC.Service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.enumerate.disease_detection.MVC.Mapper.CropsMapper;
 import com.enumerate.disease_detection.MVC.Mapper.DiseasesMapper;
-
+import com.enumerate.disease_detection.MVC.Mapper.KgLinksMapper;
+import com.enumerate.disease_detection.MVC.Mapper.KgNodesMapper;
+import com.enumerate.disease_detection.MVC.POJO.PO.CropsPO;
 import com.enumerate.disease_detection.MVC.POJO.PO.DiseasesPO;
+import com.enumerate.disease_detection.MVC.POJO.PO.KgLinksPO;
+import com.enumerate.disease_detection.MVC.POJO.PO.KgNodesPO;
 import com.enumerate.disease_detection.MVC.POJO.VO.CropListVO;
 import com.enumerate.disease_detection.MVC.POJO.VO.DiseasesPageResult;
+import com.enumerate.disease_detection.MVC.POJO.VO.KgGraphVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -25,8 +33,130 @@ public class KnowledgeService {
     @Autowired
     private DiseasesMapper diseasesMapper;
 
+    @Autowired
+    private KgNodesMapper kgNodesMapper;
+
+    @Autowired
+    private KgLinksMapper kgLinksMapper;
+
     public List<CropListVO> getCrops() {
         return cropsMapper.getCrops();
+    }
+
+    public KgGraphVO getKnowledgeGraph(String keyword, List<String> categories, Integer depth) {
+        log.info("Fetching knowledge graph: keyword={}, categories={}, depth={}", keyword, categories, depth);
+
+        // Try to fetch from kg_nodes first
+        List<KgNodesPO> nodes = new ArrayList<>();
+        List<KgLinksPO> links = new ArrayList<>();
+
+        LambdaQueryWrapper<KgNodesPO> nodeWrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(keyword)) {
+            nodeWrapper.like(KgNodesPO::getName, keyword);
+        }
+        if (categories != null && !categories.isEmpty()) {
+            nodeWrapper.in(KgNodesPO::getType, categories);
+        }
+
+        nodes = kgNodesMapper.selectList(nodeWrapper);
+
+        if (nodes.isEmpty() && !StringUtils.hasText(keyword) && (categories == null || categories.isEmpty())) {
+            // Fallback: Generate from crops and diseases if kg_nodes is empty
+            return generateGraphFromExistingData();
+        }
+
+        if (!nodes.isEmpty()) {
+            List<String> nodeIds = nodes.stream().map(KgNodesPO::getId).collect(Collectors.toList());
+            LambdaQueryWrapper<KgLinksPO> linkWrapper = new LambdaQueryWrapper<>();
+            linkWrapper.in(KgLinksPO::getSourceId, nodeIds).or().in(KgLinksPO::getTargetId, nodeIds);
+            links = kgLinksMapper.selectList(linkWrapper);
+        }
+
+        return convertToVO(nodes, links);
+    }
+
+    private KgGraphVO generateGraphFromExistingData() {
+        List<KgNodesPO> nodes = new ArrayList<>();
+        List<KgLinksPO> links = new ArrayList<>();
+
+        List<CropsPO> crops = cropsMapper.selectList(null);
+        for (CropsPO crop : crops) {
+            nodes.add(KgNodesPO.builder()
+                    .id("crop_" + crop.getId())
+                    .name(crop.getName())
+                    .type("crop")
+                    .value(30)
+                    .details("农作物: " + crop.getName())
+                    .build());
+        }
+
+        List<DiseasesPO> diseases = diseasesMapper.selectList(null);
+        for (DiseasesPO disease : diseases) {
+            String diseaseNodeId = "disease_" + disease.getId();
+            nodes.add(KgNodesPO.builder()
+                    .id(diseaseNodeId)
+                    .name(disease.getDiseaseName())
+                    .type("pest")
+                    .value(20)
+                    .details(disease.getIntroduction())
+                    .build());
+
+            // Link to crop
+            if (StringUtils.hasText(disease.getCropName())) {
+                crops.stream()
+                        .filter(c -> c.getName().equals(disease.getCropName()))
+                        .findFirst()
+                        .ifPresent(c -> {
+                            links.add(KgLinksPO.builder()
+                                    .sourceId("crop_" + c.getId())
+                                    .targetId(diseaseNodeId)
+                                    .relation("易发病害")
+                                    .build());
+                        });
+            }
+        }
+
+        return convertToVO(nodes, links);
+    }
+
+    private KgGraphVO convertToVO(List<KgNodesPO> nodes, List<KgLinksPO> links) {
+        List<KgGraphVO.LinkVO> linkVOs = links.stream()
+                .map(l -> new KgGraphVO.LinkVO(l.getSourceId(), l.getTargetId(), l.getRelation()))
+                .collect(Collectors.toList());
+        return new KgGraphVO(nodes, linkVOs);
+    }
+
+    public List<String> getSuggestNodes(String q) {
+        if (!StringUtils.hasText(q)) {
+            return new ArrayList<>();
+        }
+
+        // Try kg_nodes first
+        List<String> suggestions = kgNodesMapper.selectList(new LambdaQueryWrapper<KgNodesPO>()
+                .like(KgNodesPO::getName, q)
+                .last("LIMIT 10"))
+                .stream()
+                .map(KgNodesPO::getName)
+                .collect(Collectors.toList());
+
+        if (suggestions.isEmpty()) {
+            // Fallback to crops and diseases
+            suggestions.addAll(cropsMapper.selectList(new LambdaQueryWrapper<CropsPO>()
+                    .like(CropsPO::getName, q)
+                    .last("LIMIT 5"))
+                    .stream()
+                    .map(CropsPO::getName)
+                    .toList());
+
+            suggestions.addAll(diseasesMapper.selectList(new QueryWrapper<DiseasesPO>()
+                    .like("disease_name", q)
+                    .last("LIMIT 5"))
+                    .stream()
+                    .map(DiseasesPO::getDiseaseName)
+                    .toList());
+        }
+
+        return suggestions.stream().distinct().collect(Collectors.toList());
     }
 
     // 假设你的 mapper 和返回结果类已经正确引入

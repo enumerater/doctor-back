@@ -11,6 +11,8 @@ import com.enumerate.disease_detection.MVC.Mapper.DiagnosisMapper;
 import com.enumerate.disease_detection.MVC.Mapper.DiseasesMapper;
 import com.enumerate.disease_detection.MVC.Mapper.FarmMapper;
 import com.enumerate.disease_detection.MVC.Mapper.PlotMapper;
+import com.enumerate.disease_detection.MVC.POJO.VO.KgGraphVO;
+import com.enumerate.disease_detection.MVC.Service.KnowledgeService;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -36,69 +39,51 @@ public class DatabaseTool {
     private DiseasesMapper diseasesMapper;
 
     @Autowired
-    private com.enumerate.disease_detection.MVC.Service.InteractionManager interactionManager;
+    private KnowledgeService knowledgeService;
 
-    @Tool("向用户发起询问确认。当需要用户确认某项操作（如创建农场、删除地块等）时调用。该工具会通过WebSocket向前端推送一个确认框，并等待用户点击'同意'或'拒绝'。")
-    @ToolName("发起确认")
-    public String askUserConfirmation(@P("要询问用户的内容，例如：'您要创建一个农场吗？'") String prompt) {
-        log.info("工具调用: 发起确认, prompt={}", prompt);
-        org.springframework.web.socket.WebSocketSession session = com.enumerate.disease_detection.Local.SessionHolder.getSession();
-        if (session == null) {
-            return "当前不是WebSocket会话，无法发起互动确认。";
+    @Tool("搜索农业知识图谱，查找特定关键词及其关联的知识点（如作物、病害、药剂、节气等）。当需要了解节点之间的关系或进行深度关联分析时调用。")
+    @ToolName("搜索知识图谱")
+    public String searchKnowledgeGraph(@P("关键词") String keyword) {
+        log.info("工具调用: 搜索知识图谱, keyword={}", keyword);
+
+        KgGraphVO graph = knowledgeService.getKnowledgeGraph(keyword, null, 2);
+
+        if (graph.getNodes().isEmpty()) {
+            return "在知识图谱中未找到与\"" + keyword + "\"相关的节点。";
         }
 
-        String actionId = "confirm_" + System.currentTimeMillis();
-        com.enumerate.disease_detection.MVC.Controller.ChatWebSocketHandler.sendMessage(session, java.util.Map.of(
-                "type", "interaction",
-                "interactionType", "confirm",
-                "prompt", prompt,
-                "actionId", actionId
-        ));
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("在知识图谱中找到 %d 个节点和 %d 条关系：\n",
+                graph.getNodes().size(), graph.getLinks().size()));
 
-        try {
-            java.util.Map<String, Object> response = interactionManager.createInteraction(actionId).get(1, java.util.concurrent.TimeUnit.MINUTES);
-            boolean confirmed = (Boolean) response.get("confirmed");
-            return confirmed ? "用户已同意。" : "用户拒绝了操作。";
-        } catch (Exception e) {
-            log.error("等待用户确认超时或出错", e);
-            return "等待用户确认超时。";
+        sb.append("\n【节点信息】\n");
+        for (var node : graph.getNodes()) {
+            sb.append(String.format("- [%s] %s: %s\n",
+                    node.getType(), node.getName(),
+                    node.getDetails() != null ? node.getDetails() : "暂无详情"));
         }
-    }
 
-    @Tool("在数据库中创建一个新农场。仅在用户明确表示同意（或通过'发起确认'工具获得同意）后调用。需要提供农场名称、位置。")
-    @ToolName("创建农场")
-    public String createFarm(
-            @P("用户ID") String userId,
-            @P("农场名称") String name,
-            @P("农场位置") String location) {
-        log.info("【数据库工具】准备创建农场 - 接收到的 userId: {}, 农场名: {}, 位置: {}", userId, name, location);
-
-        try {
-            FarmPO farm = FarmPO.builder()
-                    .userId(Long.valueOf(userId))
-                    .name(name)
-                    .location(location)
-                    .area("0")
-                    .plotCount(0)
-                    .build();
-
-            int rows = farmMapper.insert(farm);
-            if (rows > 0) {
-                log.info("【数据库工具】农场创建成功，ID: {}", farm.getId());
-                return "农场创建成功！ID: " + farm.getId() + "。您可以继续为该农场添加地块。";
+        if (!graph.getLinks().isEmpty()) {
+            sb.append("\n【关联关系】\n");
+            for (var link : graph.getLinks()) {
+                String sourceName = graph.getNodes().stream()
+                        .filter(n -> n.getId().equals(link.getSource()))
+                        .findFirst().map(n -> n.getName()).orElse(link.getSource());
+                String targetName = graph.getNodes().stream()
+                        .filter(n -> n.getId().equals(link.getTarget()))
+                        .findFirst().map(n -> n.getName()).orElse(link.getTarget());
+                sb.append(String.format("- %s --(%s)--> %s\n", sourceName, link.getRelation(), targetName));
             }
-        } catch (Exception e) {
-            log.error("【数据库工具】创建农场异常，可能原因是 userId {} 在 sys_user 中不存在", userId, e);
-            return "创建失败：数据库外键约束检查失败，请确保用户 ID 有效。错误详情：" + e.getMessage();
         }
-        return "农场创建失败，原因未知。";
+
+        return sb.toString();
     }
 
 
     @Tool("查询用户的历史诊断记录，可以了解用户过去的作物病害诊断情况，包括作物类型、病害名称、严重程度、诊断时间等。当用户询问'我之前的诊断记录'、'历史检测结果'、'上次诊断'等问题时应调用此工具。")
     @ToolName("查询诊断历史")
     public String queryDiagnosisHistory(
-            @P("用户ID") String userId,
+            @P("用户ID") Long userId,
             @P("返回的最大记录数，默认10") int limit) {
         log.info("工具调用: 查询诊断历史, userId={}, limit={}", userId, limit);
 
