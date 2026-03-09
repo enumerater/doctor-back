@@ -36,6 +36,8 @@ public interface Assistant {
     @SystemMessage({"你现在是一位农学专家，回答用户的农业问题,回答尽量简洁易懂"})
     TokenStream chatMemory(@MemoryId String memoryId, @UserMessage String userMessage);
 
+    String chat(String userMessage);
+
 
 
 
