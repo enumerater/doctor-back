@@ -10,6 +10,7 @@ com\enumerate\disease_detection\ChatModel\MainModel.class
 com\enumerate\disease_detection\MVC\POJO\DTO\ToolDefinitionDTO$ToolDefinitionDTOBuilder.class
 com\enumerate\disease_detection\MVC\Service\EmailService.class
 com\enumerate\disease_detection\MVC\POJO\VO\CropDistribution.class
+com\enumerate\disease_detection\MVC\POJO\VO\DailyTempRecordVO.class
 com\enumerate\disease_detection\MVC\Controller\KnowledgeController.class
 com\enumerate\disease_detection\MVC\POJO\VO\AnnounceTypes$AnnounceTypesBuilder.class
 com\enumerate\disease_detection\MVC\Controller\TestController.class
@@ -41,6 +42,7 @@ com\enumerate\disease_detection\MVC\POJO\VO\AnnouncementPageQueryVO$Announcement
 com\enumerate\disease_detection\ModelInterfaces\VisionAssisant.class
 com\enumerate\disease_detection\MVC\POJO\PO\AnnouncementPO.class
 com\enumerate\disease_detection\Tools\WebSearchTool.class
+com\enumerate\disease_detection\MVC\Service\WeatherService.class
 com\enumerate\disease_detection\MVC\POJO\DTO\UserDTO.class
 com\enumerate\disease_detection\MVC\Controller\ChatController.class
 com\enumerate\disease_detection\MVC\POJO\PO\DiseasesPO.class
@@ -48,6 +50,7 @@ com\enumerate\disease_detection\MVC\POJO\VO\NotificationPageQueryVO$Notification
 com\enumerate\disease_detection\MVC\POJO\DTO\UserPasswordDTO.class
 com\enumerate\disease_detection\MVC\POJO\PO\AnnouncementPO$AnnouncementPOBuilder.class
 com\enumerate\disease_detection\MVC\POJO\DTO\Prevention.class
+com\enumerate\disease_detection\MVC\POJO\VO\DailyTempRecordVO$DailyTempRecordVOBuilder.class
 com\enumerate\disease_detection\MVC\POJO\DTO\FeedbackDTO.class
 com\enumerate\disease_detection\MVC\POJO\PO\DiagnosisPO$DiagnosisPOBuilder.class
 com\enumerate\disease_detection\MVC\Controller\FarmController.class
@@ -56,6 +59,7 @@ com\enumerate\disease_detection\MVC\POJO\VO\VisionVO$Prevention.class
 com\enumerate\disease_detection\MVC\Mapper\UserMapper.class
 com\enumerate\disease_detection\ModelInterfaces\RequestCategory.class
 com\enumerate\disease_detection\MVC\POJO\VO\AdminKnowledgeListVO.class
+com\enumerate\disease_detection\MVC\POJO\VO\AccumulatedTempPredictionVO$AccumulatedTempPredictionVOBuilder.class
 com\enumerate\disease_detection\MVC\Service\FarmService.class
 com\enumerate\disease_detection\MVC\Controller\UserController.class
 com\enumerate\disease_detection\MVC\POJO\DTO\UserPasswordDTO$UserPasswordDTOBuilder.class
@@ -88,12 +92,12 @@ com\enumerate\disease_detection\MVC\POJO\PO\UserPO$UserPOBuilder.class
 com\enumerate\disease_detection\MVC\Service\FeedbackService.class
 com\enumerate\disease_detection\MVC\POJO\VO\AnnounceTypes.class
 com\enumerate\disease_detection\MVC\POJO\PO\PlotStagePO.class
-com\enumerate\disease_detection\MVC\POJO\PO\AgentChatMessagePO.class
 com\enumerate\disease_detection\MVC\POJO\DTO\Prevention$PreventionBuilder.class
 com\enumerate\disease_detection\MVC\Service\RedisService.class
 com\enumerate\disease_detection\Interceptors\JwtInterceptor.class
 com\enumerate\disease_detection\MVC\Controller\AdminController.class
 com\enumerate\disease_detection\MVC\Mapper\MemoryProcessLogMapper.class
+com\enumerate\disease_detection\MVC\Service\Impl\PlotAccumulatedTempServiceImpl.class
 com\enumerate\disease_detection\MVC\Controller\SessionController.class
 com\enumerate\disease_detection\MVC\POJO\VO\PlotVOO$PlotVOOBuilder.class
 com\enumerate\disease_detection\Utils\FastApiClientUtil.class
@@ -107,6 +111,8 @@ com\enumerate\disease_detection\MVC\POJO\DTO\PicDTO$PicDTOBuilder.class
 com\enumerate\disease_detection\MVC\Mapper\ChatMessageMapper.class
 com\enumerate\disease_detection\MVC\Controller\AnnouncementController.class
 com\enumerate\disease_detection\MVC\Service\MessageService.class
+com\enumerate\disease_detection\MVC\Service\PlotAccumulatedTempService.class
+com\enumerate\disease_detection\MVC\Controller\PlotAccumulatedTempController.class
 com\enumerate\disease_detection\MVC\POJO\DTO\PlotStageDTO.class
 com\enumerate\disease_detection\MVC\POJO\DTO\DiagnosisDTO$DiagnosisDTOBuilder.class
 com\enumerate\disease_detection\MVC\Mapper\CropsMapper.class
@@ -187,6 +193,7 @@ com\enumerate\disease_detection\MVC\POJO\PO\FarmPO.class
 com\enumerate\disease_detection\Configurations\ChatModelConfig.class
 com\enumerate\disease_detection\MVC\Mapper\PlotDiagnosisMapper.class
 com\enumerate\disease_detection\MVC\POJO\VO\VisionVO$VisionVOBuilder.class
+com\enumerate\disease_detection\MVC\POJO\VO\AccumulatedTempVO$AccumulatedTempVOBuilder.class
 com\enumerate\disease_detection\MVC\POJO\DTO\AnnouncementGenerateDTO$AnnouncementGenerateDTOBuilder.class
 com\enumerate\disease_detection\MVC\POJO\VO\AdminStatsVO.class
 com\enumerate\disease_detection\MVC\Service\TestService.class
@@ -217,6 +224,7 @@ com\enumerate\disease_detection\MVC\POJO\PO\ChatMessagePO$ChatMessagePOBuilder.c
 com\enumerate\disease_detection\Tools\IdsDeserializer.class
 com\enumerate\disease_detection\MVC\POJO\VO\ToolsVO.class
 com\enumerate\disease_detection\MVC\Mapper\ToolsMapper.class
+com\enumerate\disease_detection\MVC\Service\Impl\WeatherServiceImpl.class
 com\enumerate\disease_detection\MVC\POJO\PO\VectorStorePO.class
 com\enumerate\disease_detection\MVC\POJO\VO\DayTemperatureVO.class
 com\enumerate\disease_detection\Constant\UserLoginConstant.class
@@ -227,9 +235,11 @@ com\enumerate\disease_detection\MVC\Controller\NotificationController.class
 com\enumerate\disease_detection\MVC\POJO\DTO\AvatarDTO.class
 com\enumerate\disease_detection\MVC\POJO\VO\PlotVOO.class
 com\enumerate\disease_detection\MVC\POJO\VO\AdminStatsVO$AdminStatsVOBuilder.class
+com\enumerate\disease_detection\MVC\POJO\VO\AccumulatedTempVO.class
 com\enumerate\disease_detection\MVC\POJO\DTO\ChatSessionDTO.class
 com\enumerate\disease_detection\MVC\Service\NotificationService.class
 com\enumerate\disease_detection\MVC\Mapper\AnnouncementMapper.class
 com\enumerate\disease_detection\MVC\Mapper\PlotVOOMapper.class
 com\enumerate\disease_detection\MVC\POJO\DTO\UserNameUpdateDTO$UserNameUpdateDTOBuilder.class
 com\enumerate\disease_detection\MVC\POJO\VO\AdminUserListVO$AdminUserListVOBuilder.class
+com\enumerate\disease_detection\MVC\POJO\VO\AccumulatedTempPredictionVO.class
