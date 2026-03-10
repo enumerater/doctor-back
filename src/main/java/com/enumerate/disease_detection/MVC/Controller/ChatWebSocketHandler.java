@@ -14,6 +14,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -64,13 +65,32 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             JSONObject json = JSON.parseObject(payload);
             String type = json.getString("type");
             log.info("【WebSocket】消息类型: {}", type);
-
-            if ("chat".equals(type)) {
+            // 用户输入
+            if ("user_input".equals(type)) {
                 String content = json.getString("content");
-                log.info("【WebSocket】正在调用 Agent 处理内容: {}", content);
-                // Execute Agent Workflow
-                agentWorkflowService.executeWs(session, content, userId);
-            } else if ("interaction_response".equals(type)) {
+
+                String imageList;
+                try {
+                    imageList = Arrays.toString(new String[]{json.getString("images")});
+                } catch (Exception e) {
+                    log.info("【WebSocket】未获取到图片列表");
+                    imageList = null;
+                }
+
+                String modelName;
+                try {
+                    modelName = json.getString("model");
+                } catch (Exception e) {
+                    log.info("【WebSocket】未获取到模型名称");
+                    modelName = "gpt-3.5-turbo";
+                }
+
+                String finallyPrompt = content + imageList;
+
+                log.info("【WebSocket】正在调用 Agent 处理内容: {}", finallyPrompt);
+                agentWorkflowService.executeWs(session, finallyPrompt, userId);
+
+            } else if ("user_confirm".equals(type)) { // 用户确认
                 String actionId = json.getString("actionId");
                 JSONObject data = json.getJSONObject("data");
                 if (actionId != null) {
@@ -78,7 +98,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 } else {
                     log.warn("【WebSocket】收到 interaction_response 但缺少 actionId");
                 }
+            } else if ("user_answer".equals(type)) { // 用户追问
+
+            } else if ("heartbeat".equals(type)) { // 心跳
+
             }
+
         } catch (Exception e) {
             log.error("【WebSocket】处理消息出错", e);
         }

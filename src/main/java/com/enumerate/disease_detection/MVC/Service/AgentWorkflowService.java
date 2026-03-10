@@ -8,6 +8,7 @@ import com.enumerate.disease_detection.Tools.VisioTool;
 import com.enumerate.disease_detection.Tools.WebSearchTool;
 import com.enumerate.disease_detection.MVC.Mapper.ChatMessageMapper;
 
+import com.enumerate.disease_detection.Utils.SendMessagesUtils;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
@@ -130,125 +131,125 @@ public class AgentWorkflowService {
     @Resource(name = "tongYiModel")
     private OpenAiChatModel model;
 
-    /**
-     * 执行ReAct Agent工作流
-     *
-     * @param emitter SSE事件发射器
-     * @param input   用户输入（文本，可能包含图片URL标记）
-     * @param userId  用户ID
-     */
-    @Async
-    public void execute(SseEmitter emitter, String input, Long userId) {
-        int msgId = 1;
-
-        try {
-
-            // 收集所有工具规范
-            List<ToolSpecification> allToolSpecs = new ArrayList<>(builtinToolSpecs);
-
-            log.info("内置工具加载完成: {}",
-                    builtinToolSpecs);
-
-            try {
-                log.info("工具加载完成: {} 个",
-                        builtinToolSpecs.size());
-            } catch (Exception e) {
-                log.error("加载动态工具失败，继续使用内置工具", e);
-            }
-
-            // 构建消息列表
-            List<ChatMessage> messages = new ArrayList<>();
-            messages.add(SystemMessage.from(buildSystemPrompt(userId)));
-            messages.add(UserMessage.from(input));
-
-            sendStatusEvent(emitter, msgId++, "thinking", "正在分析您的问题...");
-
-            // ReAct 循环
-            for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
-                log.info("===== ReAct 迭代 {}/{} =====", iteration, MAX_ITERATIONS);
-
-                ChatRequest request = ChatRequest.builder()
-                        .messages(messages)
-                        .toolSpecifications(allToolSpecs)
-                        .build();
-
-                ChatResponse response = model.chat(request);
-                AiMessage aiMessage = response.aiMessage();
-                messages.add(aiMessage);
-
-                // 发送思考内容
-                if (aiMessage.text() != null && !aiMessage.text().isBlank()) {
-                    if (aiMessage.hasToolExecutionRequests()) {
-                        sendDataEvent(emitter, msgId++, "thought", aiMessage.text());
-                    } else {
-                        // 没有工具调用请求 → 这是最终回答
-                        sendStatusEvent(emitter, msgId++, "completed", "回答完成");
-                        sendDataEvent(emitter, msgId++, "final_result", aiMessage.text());
-                        emitter.complete();
-                        return;
-                    }
-                }
-
-                // 处理工具调用
-                if (aiMessage.hasToolExecutionRequests()) {
-                    for (ToolExecutionRequest toolRequest : aiMessage.toolExecutionRequests()) {
-                        String toolName = toolRequest.name();
-                        log.info("调用工具: {} | 参数: {}", toolName, toolRequest.arguments());
-
-                        sendStatusEvent(emitter, msgId++, "tool_calling",
-                                String.format("正在调用工具: %s", toolName));
-
-                        String result;
-                        try {
-                            if (builtinExecutors.containsKey(toolName)) {
-                                result = builtinExecutors.get(toolName).execute(toolRequest, null);
-
-                            } else {
-                                result = "未找到工具: " + toolName;
-                                log.warn("未找到工具: {}", toolName);
-                            }
-                        } catch (Exception e) {
-                            log.error("工具执行失败: {}", toolName, e);
-                            result = "工具执行失败: " + e.getMessage();
-                        }
-
-                        sendDataEvent(emitter, msgId++, "observation",
-                                String.format("%s", truncateResult(result)));
-
-                        ToolExecutionResultMessage resultMessage =
-                                ToolExecutionResultMessage.from(toolRequest, result);
-                        messages.add(resultMessage);
-                    }
-                } else {
-                    // 既没有文本也没有工具调用（不太可能但做保护）
-                    log.warn("AI响应既无文本也无工具调用，结束循环");
-                    sendStatusEvent(emitter, msgId++, "completed", "回答完成");
-                    sendDataEvent(emitter, msgId++, "final_result", "抱歉，无法生成有效回答，请重试。");
-                    emitter.complete();
-                    return;
-                }
-            }
-
-            // 达到最大迭代次数
-            log.warn("达到最大迭代次数 {}，强制结束", MAX_ITERATIONS);
-            sendStatusEvent(emitter, msgId++, "completed", "已达到最大推理步数");
-
-            // 尝试获取最后的AI消息作为结果
-            String lastText = extractLastAiText(messages);
-            if (lastText != null && !lastText.isBlank()) {
-                sendDataEvent(emitter, msgId++, "final_result", lastText);
-            } else {
-                sendDataEvent(emitter, msgId++, "final_result",
-                        "抱歉，经过多轮推理仍未能得出满意答案，请尝试简化您的问题。");
-            }
-            emitter.complete();
-
-        } catch (Exception e) {
-            log.error("ReAct Agent执行失败", e);
-            sendStatusEvent(emitter, msgId++, "error", "执行出错: " + e.getMessage());
-            emitter.completeWithError(e);
-        }
-    }
+//    /**
+//     * 执行ReAct Agent工作流
+//     *
+//     * @param emitter SSE事件发射器
+//     * @param input   用户输入（文本，可能包含图片URL标记）
+//     * @param userId  用户ID
+//     */
+//    @Async
+//    public void execute(SseEmitter emitter, String input, Long userId) {
+//        int msgId = 1;
+//
+//        try {
+//
+//            // 收集所有工具规范
+//            List<ToolSpecification> allToolSpecs = new ArrayList<>(builtinToolSpecs);
+//
+//            log.info("内置工具加载完成: {}",
+//                    builtinToolSpecs);
+//
+//            try {
+//                log.info("工具加载完成: {} 个",
+//                        builtinToolSpecs.size());
+//            } catch (Exception e) {
+//                log.error("加载动态工具失败，继续使用内置工具", e);
+//            }
+//
+//            // 构建消息列表
+//            List<ChatMessage> messages = new ArrayList<>();
+//            messages.add(SystemMessage.from(buildSystemPrompt(userId)));
+//            messages.add(UserMessage.from(input));
+//
+//            sendStatusEvent(emitter, msgId++, "thinking", "正在分析您的问题...");
+//
+//            // ReAct 循环
+//            for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
+//                log.info("===== ReAct 迭代 {}/{} =====", iteration, MAX_ITERATIONS);
+//
+//                ChatRequest request = ChatRequest.builder()
+//                        .messages(messages)
+//                        .toolSpecifications(allToolSpecs)
+//                        .build();
+//
+//                ChatResponse response = model.chat(request);
+//                AiMessage aiMessage = response.aiMessage();
+//                messages.add(aiMessage);
+//
+//                // 发送思考内容
+//                if (aiMessage.text() != null && !aiMessage.text().isBlank()) {
+//                    if (aiMessage.hasToolExecutionRequests()) {
+//                        sendDataEvent(emitter, msgId++, "thought", aiMessage.text());
+//                    } else {
+//                        // 没有工具调用请求 → 这是最终回答
+//                        sendStatusEvent(emitter, msgId++, "completed", "回答完成");
+//                        sendDataEvent(emitter, msgId++, "final_result", aiMessage.text());
+//                        emitter.complete();
+//                        return;
+//                    }
+//                }
+//
+//                // 处理工具调用
+//                if (aiMessage.hasToolExecutionRequests()) {
+//                    for (ToolExecutionRequest toolRequest : aiMessage.toolExecutionRequests()) {
+//                        String toolName = toolRequest.name();
+//                        log.info("调用工具: {} | 参数: {}", toolName, toolRequest.arguments());
+//
+//                        sendStatusEvent(emitter, msgId++, "tool_calling",
+//                                String.format("正在调用工具: %s", toolName));
+//
+//                        String result;
+//                        try {
+//                            if (builtinExecutors.containsKey(toolName)) {
+//                                result = builtinExecutors.get(toolName).execute(toolRequest, null);
+//
+//                            } else {
+//                                result = "未找到工具: " + toolName;
+//                                log.warn("未找到工具: {}", toolName);
+//                            }
+//                        } catch (Exception e) {
+//                            log.error("工具执行失败: {}", toolName, e);
+//                            result = "工具执行失败: " + e.getMessage();
+//                        }
+//
+//                        sendDataEvent(emitter, msgId++, "observation",
+//                                String.format("%s", truncateResult(result)));
+//
+//                        ToolExecutionResultMessage resultMessage =
+//                                ToolExecutionResultMessage.from(toolRequest, result);
+//                        messages.add(resultMessage);
+//                    }
+//                } else {
+//                    // 既没有文本也没有工具调用（不太可能但做保护）
+//                    log.warn("AI响应既无文本也无工具调用，结束循环");
+//                    sendStatusEvent(emitter, msgId++, "completed", "回答完成");
+//                    sendDataEvent(emitter, msgId++, "final_result", "抱歉，无法生成有效回答，请重试。");
+//                    emitter.complete();
+//                    return;
+//                }
+//            }
+//
+//            // 达到最大迭代次数
+//            log.warn("达到最大迭代次数 {}，强制结束", MAX_ITERATIONS);
+//            sendStatusEvent(emitter, msgId++, "completed", "已达到最大推理步数");
+//
+//            // 尝试获取最后的AI消息作为结果
+//            String lastText = extractLastAiText(messages);
+//            if (lastText != null && !lastText.isBlank()) {
+//                sendDataEvent(emitter, msgId++, "final_result", lastText);
+//            } else {
+//                sendDataEvent(emitter, msgId++, "final_result",
+//                        "抱歉，经过多轮推理仍未能得出满意答案，请尝试简化您的问题。");
+//            }
+//            emitter.complete();
+//
+//        } catch (Exception e) {
+//            log.error("ReAct Agent执行失败", e);
+//            sendStatusEvent(emitter, msgId++, "error", "执行出错: " + e.getMessage());
+//            emitter.completeWithError(e);
+//        }
+//    }
 
     private String buildSystemPrompt(Long userId) {
 
@@ -320,7 +321,9 @@ public class AgentWorkflowService {
         return result;
     }
 
-    // ========== SSE 事件发送 ==========
+
+    @Autowired
+    private SendMessagesUtils sendMessagesUtils;
 
     /**
      * 执行ReAct Agent工作流 (WebSocket版)
@@ -349,7 +352,7 @@ public class AgentWorkflowService {
             messages.add(SystemMessage.from(buildSystemPrompt(userId)));
             messages.addAll(chatMemory.messages());
 
-            sendStatusEvent(session, msgId++, "thinking", "正在分析您的问题...");
+            sendMessagesUtils.sendEvent(session,"thought", msgId++, "正在思考");
 
             for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
                 ChatRequest request = ChatRequest.builder()
@@ -364,10 +367,12 @@ public class AgentWorkflowService {
 
                 if (aiMessage.text() != null && !aiMessage.text().isBlank()) {
                     if (aiMessage.hasToolExecutionRequests()) {
-                        sendDataEvent(session, msgId++, "thought", aiMessage.text());
+//                        sendDataEvent(session, msgId++, "thought", aiMessage.text());
+                        sendMessagesUtils.sendEvent(session,"thought", msgId++, aiMessage.text());
                     } else {
-                        sendStatusEvent(session, msgId++, "completed", "回答完成");
-                        sendDataEvent(session, msgId++, "final_result", aiMessage.text());
+//                        sendStatusEvent(session, msgId++, "completed", "回答完成");
+                        sendMessagesUtils.sendEvent(session,"answer", msgId++, "思考完成");
+
                         return;
                     }
                 }
@@ -375,8 +380,7 @@ public class AgentWorkflowService {
                 if (aiMessage.hasToolExecutionRequests()) {
                     for (ToolExecutionRequest toolRequest : aiMessage.toolExecutionRequests()) {
                         String toolName = toolRequest.name();
-                        sendStatusEvent(session, msgId++, "tool_calling",
-                                String.format("正在调用工具: %s", toolName));
+                        sendMessagesUtils.sendEvent(session,"tool_call", msgId++, "正在调用工具", null, toolName);
 
                         String result;
                         try {
@@ -390,82 +394,29 @@ public class AgentWorkflowService {
                             result = "工具执行失败: " + e.getMessage();
                         }
 
-                        sendDataEvent(session, msgId++, "observation", truncateResult(result));
+                        // sendDataEvent(session, msgId++, "observation", truncateResult(result));
+                        sendMessagesUtils.sendEvent(session,"tool_result", msgId++, "工具调用完成", truncateResult(result));
                         ToolExecutionResultMessage resultMessage = ToolExecutionResultMessage.from(toolRequest, result);
                         messages.add(resultMessage);
                         chatMemory.add(resultMessage); // 同步到记忆
                     }
                 } else {
-                    sendStatusEvent(session, msgId++, "completed", "回答完成");
-                    sendDataEvent(session, msgId++, "final_result", "抱歉，无法生成有效回答。");
+//                    sendStatusEvent(session, msgId++, "completed", "回答完成");
+//                    sendDataEvent(session, msgId++, "final_result", "抱歉，无法生成有效回答。");
                     return;
                 }
             }
-            sendStatusEvent(session, msgId++, "completed", "已达到最大推理步数");
+//            sendStatusEvent(session, msgId++, "completed", "已达到最大推理步数");
             String lastText = extractLastAiText(messages);
-            sendDataEvent(session, msgId++, "final_result", lastText != null ? lastText : "推理结束。");
+//            sendDataEvent(session, msgId++, "final_result", lastText != null ? lastText : "推理结束。");
 
         } catch (Exception e) {
             log.error("ReAct Agent执行失败", e);
-            sendStatusEvent(session, msgId++, "error", "执行出错: " + e.getMessage());
+//            sendStatusEvent(session, msgId++, "error", "执行出错: " + e.getMessage());
         } finally {
             com.enumerate.disease_detection.Local.SessionHolder.removeSession();
         }
     }
 
-    private void sendStatusEvent(WebSocketSession session, int id, String status, String message) {
-        if (session == null) return;
-        com.enumerate.disease_detection.MVC.Controller.ChatWebSocketHandler.sendMessage(session, Map.of(
-                "type", "status",
-                "id", id,
-                "status", status,
-                "message", message,
-                "timestamp", System.currentTimeMillis()
-        ));
-    }
 
-    private void sendDataEvent(WebSocketSession session, int id, String type, String content) {
-        if (session == null) return;
-        com.enumerate.disease_detection.MVC.Controller.ChatWebSocketHandler.sendMessage(session, Map.of(
-                "type", "data",
-                "id", id,
-                "dataType", type,
-                "content", content,
-                "timestamp", System.currentTimeMillis()
-        ));
-    }
-
-    // Existing methods for SSE...
-    private void sendStatusEvent(SseEmitter emitter, int id, String status, String message) {
-        try {
-            SseEmitter.SseEventBuilder event = SseEmitter.event()
-                    .id(String.valueOf(id))
-                    .name("status")
-                    .data(Map.of(
-                            "status", status,
-                            "message", message,
-                            "timestamp", System.currentTimeMillis()
-                    ));
-            emitter.send(event);
-        } catch (IOException e) {
-            log.error("发送状态事件失败", e);
-        }
-    }
-
-
-    private void sendDataEvent(SseEmitter emitter, int id, String type, String content) {
-        try {
-            SseEmitter.SseEventBuilder event = SseEmitter.event()
-                    .id(String.valueOf(id))
-                    .name("data")
-                    .data(Map.of(
-                            "type", type,
-                            "content", content,
-                            "timestamp", System.currentTimeMillis()
-                    ));
-            emitter.send(event);
-        } catch (IOException e) {
-            log.error("发送数据事件失败", e);
-        }
-    }
 }

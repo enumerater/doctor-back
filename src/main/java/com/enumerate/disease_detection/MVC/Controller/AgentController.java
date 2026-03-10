@@ -58,7 +58,7 @@ public class AgentController {
         if (image != null && !image.isBlank() && !"null".equals(image)) {
             input = prompt + "\n\n[附图]: " + image;
         }
-        agentWorkflowService.execute(emitter, input, userId);
+//        agentWorkflowService.execute(emitter, input, userId);
 
         return emitter;
     }
