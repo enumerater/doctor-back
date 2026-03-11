@@ -351,13 +351,14 @@ public class AgentWorkflowService {
             fullPrompt = text + "\n[附带图片]: " + imageList;
         }
 
-        // 3. 获取该用户的 ChatMemory
-        String memoryId = "agent_" + userId; 
+        // 2. 获取该用户的 ChatMemory (引入 sessionId 以实现会话隔离)
+        String memoryId = "agent_session_" + sessionId; 
         dev.langchain4j.memory.ChatMemory chatMemory = dev.langchain4j.memory.chat.MessageWindowChatMemory.builder()
                 .maxMessages(20)
                 .chatMemoryStore(persistentChatMemoryStore)
                 .id(memoryId)
                 .build();
+
 
         try {
             chatMemory.add(UserMessage.from(fullPrompt));
