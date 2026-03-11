@@ -67,6 +67,9 @@ public class AgentWorkflowService {
     @Autowired
     private com.enumerate.disease_detection.ChatModel.PersistentChatMemoryStore persistentChatMemoryStore;
 
+    @Resource
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
     /** 内置 @Tool Bean 提取的 Tool Specification 列表 */
     private final List<ToolSpecification> builtinToolSpecs = new ArrayList<>();
 
@@ -333,12 +336,15 @@ public class AgentWorkflowService {
      * 执行ReAct Agent工作流 (WebSocket版 - 协议v2)
      */
     @Async
-    public void executeWs(WebSocketSession session, String input, Long userId,String sessionId) {
-        int msgId = 1;
+    public void executeWs(WebSocketSession session, String input, Long userId, String sessionId) {
         com.enumerate.disease_detection.Local.SessionHolder.setSession(session);
+        List<Map<String, Object>> trace = new ArrayList<>();
 
-        // 1. 获取该用户的 ChatMemory
-        String memoryId = "agent_" + userMapper.selectById(userId).getSessionId();
+        // 1. 保存用户输入消息
+        saveMessage(sessionId, "0", input, null);
+
+        // 2. 获取该用户的 ChatMemory
+        String memoryId = "agent_" + userId; 
         dev.langchain4j.memory.ChatMemory chatMemory = dev.langchain4j.memory.chat.MessageWindowChatMemory.builder()
                 .maxMessages(20)
                 .chatMemoryStore(persistentChatMemoryStore)
@@ -346,20 +352,20 @@ public class AgentWorkflowService {
                 .build();
 
         try {
-            // 2. 添加用户输入到记忆
             chatMemory.add(UserMessage.from(input));
 
             List<ToolSpecification> allToolSpecs = new ArrayList<>(builtinToolSpecs);
 
-            // 3. 构造包含历史记录和系统提示的消息列表
             List<ChatMessage> messages = new ArrayList<>();
             messages.add(SystemMessage.from(buildSystemPrompt(userId)));
             messages.addAll(chatMemory.messages());
 
             // 发送初始思考状态
             sendMessagesUtils.sendEvent(session, "thought", "正在分析您的问题...");
+            trace.add(createTraceNode("thought", "正在分析您的问题..."));
 
             boolean finalAnswerSent = false;
+            String finalContent = null;
 
             for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
                 log.info("===== ReAct 迭代 {}/{} =====", iteration, MAX_ITERATIONS);
@@ -379,9 +385,11 @@ public class AgentWorkflowService {
                     if (aiMessage.hasToolExecutionRequests()) {
                         // 如果有文本且还要调用工具，这通常是 AI 的思考过程
                         sendMessagesUtils.sendEvent(session, "thought", aiMessage.text());
+                        trace.add(createTraceNode("thought", aiMessage.text()));
                     } else {
                         // 最终回答
-                        sendMessagesUtils.sendEvent(session, "answer", aiMessage.text());
+                        finalContent = aiMessage.text();
+                        sendMessagesUtils.sendEvent(session, "answer", finalContent);
                         finalAnswerSent = true;
                         break; // 结束循环
                     }
@@ -389,9 +397,6 @@ public class AgentWorkflowService {
 
                 // B. 处理工具调用请求
                 if (aiMessage.hasToolExecutionRequests()) {
-                    // 在开始一批工具调用前，可以发一个状态
-                    sendMessagesUtils.sendEvent(session, "thought_result", "已确定处理方案，准备执行工具...");
-
                     for (ToolExecutionRequest toolRequest : aiMessage.toolExecutionRequests()) {
                         String toolName = toolRequest.name();
                         log.info("调用工具: {} | 参数: {}", toolName, toolRequest.arguments());
@@ -399,6 +404,7 @@ public class AgentWorkflowService {
                         // 发送 tool_call 事件
                         sendMessagesUtils.sendEvent(session, "tool_call", 
                                 "正在执行：" + toolName, null, toolName);
+                        trace.add(createTraceNode("tool_call", "执行工具: " + toolName, toolName, toolRequest.arguments()));
 
                         String result;
                         try {
@@ -416,6 +422,7 @@ public class AgentWorkflowService {
                         // 发送 tool_result 事件
                         sendMessagesUtils.sendEvent(session, "tool_result", 
                                 "工具执行完毕", truncateResult(result), toolName);
+                        trace.add(createTraceNode("tool_result", "工具执行完毕", toolName, result));
 
                         ToolExecutionResultMessage resultMessage = ToolExecutionResultMessage.from(toolRequest, result);
                         messages.add(resultMessage);
@@ -430,20 +437,61 @@ public class AgentWorkflowService {
 
             // 4. 兜底处理：如果循环结束仍未发送最终回答
             if (!finalAnswerSent) {
-                String lastText = extractLastAiText(messages);
-                if (lastText != null && !lastText.isBlank()) {
-                    sendMessagesUtils.sendEvent(session, "answer", lastText);
-                } else {
-                    sendMessagesUtils.sendEvent(session, "answer", "抱歉，我处理该请求时遇到了困难，请尝试换种说法。");
+                finalContent = extractLastAiText(messages);
+                if (finalContent == null) {
+                    finalContent = "抱歉，我处理该请求时遇到了困难，请尝试换种说法。";
                 }
+                sendMessagesUtils.sendEvent(session, "answer", finalContent);
             }
+            
+            // 5. 保存 AI 回答消息及轨迹
+            saveMessage(sessionId, "1", finalContent, trace);
 
         } catch (Exception e) {
             log.error("ReAct Agent执行失败", e);
-            sendMessagesUtils.sendEvent(session, "error", "系统繁忙，请稍后再试: " + e.getMessage());
+            String errorMsg = "系统繁忙，请稍后再试: " + e.getMessage();
+            sendMessagesUtils.sendEvent(session, "error", errorMsg);
+            
+            // 发生错误也保存一条记录
+            trace.add(createTraceNode("error", errorMsg));
+            saveMessage(sessionId, "1", "抱歉，我现在无法处理您的请求。", trace);
         } finally {
             com.enumerate.disease_detection.Local.SessionHolder.removeSession();
         }
+    }
+
+    private Map<String, Object> createTraceNode(String type, String content) {
+        return createTraceNode(type, content, null, null);
+    }
+
+    private Map<String, Object> createTraceNode(String type, String content, String tool, Object payload) {
+        Map<String, Object> node = new HashMap<>();
+        node.put("type", type);
+        node.put("content", content);
+        node.put("timestamp", System.currentTimeMillis());
+        if (tool != null) node.put("tool", tool);
+        if (payload != null) node.put("payload", payload);
+        return node;
+    }
+
+    private void saveMessage(String sessionId, String role, String content, List<Map<String, Object>> trace) {
+        String agentDataJson = null;
+        if (trace != null && !trace.isEmpty()) {
+            try {
+                agentDataJson = objectMapper.writeValueAsString(trace);
+            } catch (Exception e) {
+                log.error("Trace 序列化失败", e);
+            }
+        }
+
+        chatMessageMapper.insert(com.enumerate.disease_detection.MVC.POJO.PO.ChatMessagePO.builder()
+                .sessionId(sessionId)
+                .messageRole(role)
+                .messageContent(content)
+                .agentData(agentDataJson)
+                .messageTime(java.time.LocalDateTime.now())
+                .deleted("0")
+                .build());
     }
 
 
