@@ -8,5 +8,6 @@ public class ChatSessionDTO {
     private String sessionTitle;
     private String sessionId;
     private String sessionType;
+    private Boolean agent;
 
 }

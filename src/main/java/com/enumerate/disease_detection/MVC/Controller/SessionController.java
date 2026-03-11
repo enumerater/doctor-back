@@ -39,6 +39,10 @@ public class SessionController {
         sessionVO.setSessionTitle(chatSessionPO.getSessionTitle());
         sessionVO.setLastChatTime(chatSessionPO.getLastChatTime().toString());
         sessionVO.setSessionStatus(chatSessionPO.getSessionStatus());
+        String agentStr = chatSessionPO.getAgent();
+        // 处理空值 + 转换"1"/"0"为布尔值
+        Boolean agentBool = "1".equals(agentStr) ? Boolean.TRUE : Boolean.FALSE;
+        sessionVO.setAgent(agentBool);
 
         return Result.success(sessionVO);
     }
@@ -61,6 +65,10 @@ public class SessionController {
             sessionVO.setSessionStatus(chatSessionPO.getSessionStatus());
             sessionVO.setSessionId(chatSessionPO.getSessionId());
             sessionVO.setSessionType(chatSessionPO.getSessionType());
+            String agentStr = chatSessionPO.getAgent();
+            // 处理空值 + 转换"1"/"0"为布尔值
+            Boolean agentBool = "1".equals(agentStr) ? Boolean.TRUE : Boolean.FALSE;
+            sessionVO.setAgent(agentBool);
             sessionVOList.add(sessionVO);
         }
 
@@ -70,12 +78,23 @@ public class SessionController {
     @PostMapping
     @CrossOrigin
     public Result<String> createSession(@RequestBody ChatSessionDTO chatSessionDTO) {
+
+        Boolean agent = chatSessionDTO.getAgent();
+        log.info("agent: {}", agent);
+
         ChatSessionPO chatSessionPO = ChatSessionPO.builder().build();
         chatSessionPO.setUserId(UserContextHolder.getUserId());
         chatSessionPO.setSessionTitle(chatSessionDTO.getSessionTitle());
         chatSessionPO.setSessionStatus("1");
         chatSessionPO.setLastChatTime(LocalDateTime.now());
         chatSessionPO.setDeleted("0");
+
+        if (agent){
+            chatSessionPO.setAgent("1");
+        }
+        else{
+            chatSessionPO.setAgent("0");
+        }
 
         chatSessionPO.setSessionId(chatSessionDTO.getSessionId());
 

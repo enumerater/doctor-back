@@ -14,38 +14,46 @@ import java.util.Map;
 @Component
 public class SendMessagesUtils {
 
-    public void sendEvent(WebSocketSession session, String type, int id, String content, String payload, String tool) {
-        if (session == null) return;
+    /**
+     * 发送统一格式的 WebSocket 消息 (协议 v2)
+     *
+     * @param session WebSocket 会话
+     * @param type    消息类型 (thought, tool_call, tool_result, answer, error, etc.)
+     * @param content 展示文本内容
+     * @param payload 结构化数据 (可选)
+     * @param tool    工具标识符 (仅对 tool_call, tool_result 有效)
+     */
+    public void sendEvent(WebSocketSession session, String type, String content, Object payload, String tool) {
+        if (session == null || !session.isOpen()) return;
 
-        // 1. 使用 HashMap 构建参数（而非不可变的 Map.of），支持动态添加非必填项
         Map<String, Object> messageMap = new HashMap<>();
-        // 必选参数
         messageMap.put("type", type);
-        messageMap.put("id", id);
         messageMap.put("content", content);
         messageMap.put("timestamp", System.currentTimeMillis());
 
-        // 2. 非必填参数：仅当值不为 null/空字符串时才添加
-        if (payload != null && !payload.isEmpty()) {
+        if (payload != null) {
             messageMap.put("payload", payload);
         }
+
         if (tool != null && !tool.isEmpty()) {
             messageMap.put("tool", tool);
         }
 
-        // 3. 发送消息
         com.enumerate.disease_detection.MVC.Controller.ChatWebSocketHandler.sendMessage(session, messageMap);
     }
 
-    // 【推荐】重载方法：提供更易用的调用方式（无需传 null 给非必填参数）
-    public void sendEvent(WebSocketSession session, String type, int id, String content) {
-        // 调用原方法，非必填参数传 null
-        this.sendEvent(session, type, id, content, null, null);
+    /**
+     * 简化的发送方法 (无 payload 和 tool)
+     */
+    public void sendEvent(WebSocketSession session, String type, String content) {
+        this.sendEvent(session, type, content, null, null);
     }
 
-    // 可选重载：只传 payload 不传 tool
-    public void sendEvent(WebSocketSession session, String type, int id, String content, String payload) {
-        this.sendEvent(session, type, id, content, payload, null);
+    /**
+     * 发送包含内容和 payload 的方法
+     */
+    public void sendEvent(WebSocketSession session, String type, String content, Object payload) {
+        this.sendEvent(session, type, content, payload, null);
     }
 
 

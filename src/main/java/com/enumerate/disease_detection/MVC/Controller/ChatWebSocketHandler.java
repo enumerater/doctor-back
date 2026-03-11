@@ -88,7 +88,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 String finallyPrompt = content + imageList;
 
                 log.info("【WebSocket】正在调用 Agent 处理内容: {}", finallyPrompt);
-                agentWorkflowService.executeWs(session, finallyPrompt, userId);
+                agentWorkflowService.executeWs(session, finallyPrompt, userId, json.getString("sessionId"));
 
             } else if ("user_confirm".equals(type)) { // 用户确认
                 String actionId = json.getString("actionId");

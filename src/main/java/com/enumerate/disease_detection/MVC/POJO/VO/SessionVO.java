@@ -10,5 +10,6 @@ public class SessionVO {
     private String sessionStatus;
     private String sessionId;
     private String sessionType;
+    private Boolean agent;
 
 }

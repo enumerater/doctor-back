@@ -2,6 +2,7 @@ package com.enumerate.disease_detection.MVC.Service;
 
 import com.enumerate.disease_detection.Annotations.ToolName;
 import com.enumerate.disease_detection.ChatModel.MainModel;
+import com.enumerate.disease_detection.MVC.Mapper.UserMapper;
 import com.enumerate.disease_detection.Tools.DatabaseTool;
 import com.enumerate.disease_detection.Tools.RagTool;
 import com.enumerate.disease_detection.Tools.VisioTool;
@@ -325,16 +326,19 @@ public class AgentWorkflowService {
     @Autowired
     private SendMessagesUtils sendMessagesUtils;
 
+    @Autowired
+    private UserMapper userMapper;
+
     /**
-     * 执行ReAct Agent工作流 (WebSocket版)
+     * 执行ReAct Agent工作流 (WebSocket版 - 协议v2)
      */
     @Async
-    public void executeWs(WebSocketSession session, String input, Long userId) {
+    public void executeWs(WebSocketSession session, String input, Long userId,String sessionId) {
         int msgId = 1;
         com.enumerate.disease_detection.Local.SessionHolder.setSession(session);
 
         // 1. 获取该用户的 ChatMemory
-        String memoryId = "agent_" + userId;
+        String memoryId = "agent_" + userMapper.selectById(userId).getSessionId();
         dev.langchain4j.memory.ChatMemory chatMemory = dev.langchain4j.memory.chat.MessageWindowChatMemory.builder()
                 .maxMessages(20)
                 .chatMemoryStore(persistentChatMemoryStore)
@@ -352,9 +356,14 @@ public class AgentWorkflowService {
             messages.add(SystemMessage.from(buildSystemPrompt(userId)));
             messages.addAll(chatMemory.messages());
 
-            sendMessagesUtils.sendEvent(session,"thought", msgId++, "正在思考");
+            // 发送初始思考状态
+            sendMessagesUtils.sendEvent(session, "thought", "正在分析您的问题...");
+
+            boolean finalAnswerSent = false;
 
             for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
+                log.info("===== ReAct 迭代 {}/{} =====", iteration, MAX_ITERATIONS);
+
                 ChatRequest request = ChatRequest.builder()
                         .messages(messages)
                         .toolSpecifications(allToolSpecs)
@@ -365,22 +374,31 @@ public class AgentWorkflowService {
                 messages.add(aiMessage);
                 chatMemory.add(aiMessage); // 同步到记忆
 
+                // A. 处理 AI 的文本回复
                 if (aiMessage.text() != null && !aiMessage.text().isBlank()) {
                     if (aiMessage.hasToolExecutionRequests()) {
-//                        sendDataEvent(session, msgId++, "thought", aiMessage.text());
-                        sendMessagesUtils.sendEvent(session,"thought", msgId++, aiMessage.text());
+                        // 如果有文本且还要调用工具，这通常是 AI 的思考过程
+                        sendMessagesUtils.sendEvent(session, "thought", aiMessage.text());
                     } else {
-//                        sendStatusEvent(session, msgId++, "completed", "回答完成");
-                        sendMessagesUtils.sendEvent(session,"answer", msgId++, "思考完成");
-
-                        return;
+                        // 最终回答
+                        sendMessagesUtils.sendEvent(session, "answer", aiMessage.text());
+                        finalAnswerSent = true;
+                        break; // 结束循环
                     }
                 }
 
+                // B. 处理工具调用请求
                 if (aiMessage.hasToolExecutionRequests()) {
+                    // 在开始一批工具调用前，可以发一个状态
+                    sendMessagesUtils.sendEvent(session, "thought_result", "已确定处理方案，准备执行工具...");
+
                     for (ToolExecutionRequest toolRequest : aiMessage.toolExecutionRequests()) {
                         String toolName = toolRequest.name();
-                        sendMessagesUtils.sendEvent(session,"tool_call", msgId++, "正在调用工具", null, toolName);
+                        log.info("调用工具: {} | 参数: {}", toolName, toolRequest.arguments());
+
+                        // 发送 tool_call 事件
+                        sendMessagesUtils.sendEvent(session, "tool_call", 
+                                "正在执行：" + toolName, null, toolName);
 
                         String result;
                         try {
@@ -388,31 +406,41 @@ public class AgentWorkflowService {
                                 result = builtinExecutors.get(toolName).execute(toolRequest, null);
                             } else {
                                 result = "未找到工具: " + toolName;
+                                log.warn("未找到工具: {}", toolName);
                             }
                         } catch (Exception e) {
                             log.error("工具执行失败: {}", toolName, e);
                             result = "工具执行失败: " + e.getMessage();
                         }
 
-                        // sendDataEvent(session, msgId++, "observation", truncateResult(result));
-                        sendMessagesUtils.sendEvent(session,"tool_result", msgId++, "工具调用完成", truncateResult(result));
+                        // 发送 tool_result 事件
+                        sendMessagesUtils.sendEvent(session, "tool_result", 
+                                "工具执行完毕", truncateResult(result), toolName);
+
                         ToolExecutionResultMessage resultMessage = ToolExecutionResultMessage.from(toolRequest, result);
                         messages.add(resultMessage);
                         chatMemory.add(resultMessage); // 同步到记忆
                     }
-                } else {
-//                    sendStatusEvent(session, msgId++, "completed", "回答完成");
-//                    sendDataEvent(session, msgId++, "final_result", "抱歉，无法生成有效回答。");
-                    return;
+                } else if (aiMessage.text() == null || aiMessage.text().isBlank()) {
+                    // 既无文本也无工具调用，异常情况
+                    log.warn("AI 响应为空且无工具调用");
+                    break;
                 }
             }
-//            sendStatusEvent(session, msgId++, "completed", "已达到最大推理步数");
-            String lastText = extractLastAiText(messages);
-//            sendDataEvent(session, msgId++, "final_result", lastText != null ? lastText : "推理结束。");
+
+            // 4. 兜底处理：如果循环结束仍未发送最终回答
+            if (!finalAnswerSent) {
+                String lastText = extractLastAiText(messages);
+                if (lastText != null && !lastText.isBlank()) {
+                    sendMessagesUtils.sendEvent(session, "answer", lastText);
+                } else {
+                    sendMessagesUtils.sendEvent(session, "answer", "抱歉，我处理该请求时遇到了困难，请尝试换种说法。");
+                }
+            }
 
         } catch (Exception e) {
             log.error("ReAct Agent执行失败", e);
-//            sendStatusEvent(session, msgId++, "error", "执行出错: " + e.getMessage());
+            sendMessagesUtils.sendEvent(session, "error", "系统繁忙，请稍后再试: " + e.getMessage());
         } finally {
             com.enumerate.disease_detection.Local.SessionHolder.removeSession();
         }
