@@ -69,12 +69,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             if ("user_input".equals(type)) {
                 String content = json.getString("content");
 
-                String imageList;
-                try {
-                    imageList = Arrays.toString(new String[]{json.getString("images")});
-                } catch (Exception e) {
-                    log.info("【WebSocket】未获取到图片列表");
-                    imageList = null;
+                String imageList = null;
+                String rawImages = json.getString("images");
+                if (rawImages != null && !rawImages.isEmpty()) {
+                    imageList = Arrays.toString(new String[]{rawImages});
                 }
 
                 String modelName;
@@ -85,10 +83,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     modelName = "gpt-3.5-turbo";
                 }
 
-                String finallyPrompt = content + imageList;
-
-                log.info("【WebSocket】正在调用 Agent 处理内容: {}", finallyPrompt);
-                agentWorkflowService.executeWs(session, finallyPrompt, userId, json.getString("sessionId"));
+                log.info("【WebSocket】正在调用 Agent 处理, 文本: {}, 图片: {}", content, imageList);
+                agentWorkflowService.executeWs(session, content, imageList, userId, json.getString("sessionId"));
 
             } else if ("user_confirm".equals(type)) { // 用户确认
                 String actionId = json.getString("actionId");

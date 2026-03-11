@@ -336,14 +336,22 @@ public class AgentWorkflowService {
      * 执行ReAct Agent工作流 (WebSocket版 - 协议v2)
      */
     @Async
-    public void executeWs(WebSocketSession session, String input, Long userId, String sessionId) {
+    public void executeWs(WebSocketSession session, String text, String imageList, Long userId, String sessionId) {
         com.enumerate.disease_detection.Local.SessionHolder.setSession(session);
         List<Map<String, Object>> trace = new ArrayList<>();
 
-        // 1. 保存用户输入消息
-        saveMessage(sessionId, "0", input, null);
+        log.info("textttt  {}", text);
 
-        // 2. 获取该用户的 ChatMemory
+        // 1. 保存用户输入消息 (只存文字内容)
+        saveMessage(sessionId, "0", text, null);
+
+        // 2. 构建给 LLM 的完整 Prompt (包含图片链接供分析)
+        String fullPrompt = text;
+        if (imageList != null && !imageList.isEmpty() && !"[null]".equals(imageList) && !"[]".equals(imageList)) {
+            fullPrompt = text + "\n[附带图片]: " + imageList;
+        }
+
+        // 3. 获取该用户的 ChatMemory
         String memoryId = "agent_" + userId; 
         dev.langchain4j.memory.ChatMemory chatMemory = dev.langchain4j.memory.chat.MessageWindowChatMemory.builder()
                 .maxMessages(20)
@@ -352,7 +360,7 @@ public class AgentWorkflowService {
                 .build();
 
         try {
-            chatMemory.add(UserMessage.from(input));
+            chatMemory.add(UserMessage.from(fullPrompt));
 
             List<ToolSpecification> allToolSpecs = new ArrayList<>(builtinToolSpecs);
 
