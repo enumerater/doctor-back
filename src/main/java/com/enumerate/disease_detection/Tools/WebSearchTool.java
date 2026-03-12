@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 public class WebSearchTool {
 
     @Tool("联网搜索工具，可以搜索互联网上的最新信息。")
-    @ToolName("联网搜索")
+    @ToolName("web_search")
     public String webSearch(@P("搜索关键词") String query) {
         log.info("工具调用: 联网搜索, query={}", query);
 

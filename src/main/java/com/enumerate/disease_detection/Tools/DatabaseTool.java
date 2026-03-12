@@ -42,7 +42,7 @@ public class DatabaseTool {
     private KnowledgeService knowledgeService;
 
     @Tool("搜索农业知识图谱，查找特定作物（如柑橘）下的关键词及其关联的知识点（如病害、药剂、节气等）。当需要了解节点之间的关系或进行深度关联分析时调用。")
-    @ToolName("搜索知识图谱")
+    @ToolName("knowledge_graph")
     public String searchKnowledgeGraph(
             @P("作物名称，如：柑橘") String cropName,
             @P("搜索关键词，如：病害名、药剂名") String keyword) {
@@ -83,7 +83,7 @@ public class DatabaseTool {
 
 
     @Tool("查询用户的历史诊断记录，可以了解用户过去的作物病害诊断情况，包括作物类型、病害名称、严重程度、诊断时间等。当用户询问'我之前的诊断记录'、'历史检测结果'、'上次诊断'等问题时应调用此工具。")
-    @ToolName("查询诊断历史")
+    @ToolName("diagnosis_history")
     public String queryDiagnosisHistory(
             @P("用户ID") Long userId,
             @P("返回的最大记录数，默认10") int limit) {
@@ -117,7 +117,7 @@ public class DatabaseTool {
     }
 
     @Tool("查询用户的农场和地块信息，包括农场名称、位置、面积，以及各地块的作物类型、播种日期、生长阶段等。当用户询问'我的农场'、'我的地块'、'种了什么'等问题时应调用此工具。")
-    @ToolName("查询农场信息")
+    @ToolName("farm_info")
     public String queryUserFarmInfo(@P("用户ID") String userId) {
         log.info("工具调用: 查询农场信息, userId={}", userId);
 
@@ -161,7 +161,7 @@ public class DatabaseTool {
     }
 
     @Tool("搜索病害知识库，根据关键词查找病害的详细信息，包括症状、发病条件、传播途径、防治方法（农业防治、化学防治、生物防治）。当用户询问某种病害的信息、防治方法、症状特征时应调用此工具。")
-    @ToolName("搜索病害知识")
+    @ToolName("disease_knowledge")
     public String searchDiseaseKnowledge(@P("搜索关键词，如病害名称、作物名称等") String keyword) {
         log.info("工具调用: 搜索病害知识库, keyword={}", keyword);
 

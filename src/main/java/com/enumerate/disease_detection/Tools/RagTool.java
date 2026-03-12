@@ -24,7 +24,7 @@ public class RagTool {
     private OpenAiEmbeddingModel embeddingModel;
 
     @Tool("用户记忆检索工具：根据查询内容搜索该用户的历史记忆信息，返回与查询最相关的记忆条目。当需要了解用户的个人情况、种植习惯、历史问题等个性化信息时调用。")
-    @ToolName("用户记忆检索")
+    @ToolName("user_memory_search")
     public String userMemorySearch(@P("查询内容，描述你想了解的用户信息") String query,
                                    @P("用户ID") String userId) {
         log.info("工具调用: 用户记忆检索，参数: query={}, userId={}", query, userId);

@@ -268,18 +268,18 @@ public class AgentWorkflowService {
                 4. 给出最终的专业回答
 
                 ## 工具使用指南
-                - **视觉模型工具**: 当用户提供了图片URL时，调用此工具进行病害图像识别
-                - **用户记忆检索**: 当需要了解用户的个人情况、种植习惯、历史问题等个性化信息时调用，可检索该用户的历史记忆
-                - **查询诊断历史**: 当用户询问自己的历史诊断记录时调用
-                - **查询农场信息**: 当用户询问自己的农场、地块信息时调用
-                - **搜索病害知识**: 当需要查找特定病害的详细信息和防治方法时调用
-                - **搜索知识图谱**: 当需要了解农作物、病虫害、农药、节气之间的关联关系或进行深度知识发现时调用
-                - **联网搜索**: 当需要最新的实时信息（政策、新闻、市场等）时调用
+                - **vision_analysis**: 当用户提供了图片URL时，调用此工具进行病害图像识别
+                - **user_memory_search**: 当需要了解用户的个人情况、种植习惯、历史问题等个性化信息时调用，可检索该用户的历史记忆
+                - **diagnosis_history**: 当用户询问自己的历史诊断记录时调用
+                - **farm_info**: 当用户询问自己的农场、地块信息时调用
+                - **disease_knowledge**: 当需要查找特定病害的详细信息和防治方法时调用
+                - **knowledge_graph**: 当需要了解农作物、病虫害、农药、节气之间的关联关系或进行深度知识发现时调用
+                - **web_search**: 当需要最新的实时信息（政策、新闻、市场等）时调用
                 - **发起确认**: 当你发现用户有执行某项敏感操作（如：创建农场、删除记录）的意图时，必须先调用此工具向用户发起询问确认，得到同意后才能继续执行后续操作
                 - **创建农场**: 当用户同意创建农场后，调用此工具将农场信息插入数据库
                 
-                "1. **主动决策**：当用户提问需要实时信息（如天气、新闻、作物价格）时，请主动调用 `联网搜索` 工具，不要等待用户下指令。",
-                "2. **智能补全**：如果用户提问缺少关键背景（例如问‘今天天气怎么样’但没说地点），请先调用 `用户记忆检索` 检索用户以往的背景信息，或调用 `查询农场信息` 查看其农场位置。",
+                "1. **主动决策**：当用户提问需要实时信息（如天气、新闻、作物价格）时，请主动调用 `web_search` 工具，不要等待用户下指令。",
+                "2. **智能补全**：如果用户提问缺少关键背景（例如问‘今天天气怎么样’但没说地点），请先调用 `user_memory_search` 检索用户以往的背景信息，或调用 `farm_info` 查看其农场位置。",
                 "3. **身份意识**：当前用户的ID是 {{userId}}。在调用任何需要 userId 参数的工具时，请务必直接使用这个ID。",
                 "4. **双向互动**：如果你识别到用户想要'管理田间'、'记录农场'或直接说'我想创建一个农场'，请先思考是否已有该农场信息。如果没有，主动调用 `发起确认` 工具询问用户是否需要创建一个。如果用户同意，再通过对话引导用户提供农场名称、位置、面积等信息，最后调用 `创建农场` 工具完成操作。",
                 "5. **专业风格**：你依然是一名农学专家，回答应简洁、专业、易懂。对于不确定的信息，优先查工具，工具查不到再询问用户。",
@@ -287,7 +287,7 @@ public class AgentWorkflowService {
     
 
                 ## 个性化服务
-                - 当用户的问题涉及其具体情况（如种植作物、地区、历史病害等）时，主动调用"用户记忆检索"工具获取用户的个性化信息
+                - 当用户的问题涉及其具体情况（如种植作物、地区、历史病害等）时，主动调用"user_memory_search"工具获取用户的个性化信息
                 - 结合用户记忆提供更有针对性的建议和回答
 
                 ## 当前用户信息
@@ -411,7 +411,7 @@ public class AgentWorkflowService {
 
                         // 发送 tool_call 事件
                         sendMessagesUtils.sendEvent(session, "tool_call",
-                                "正在执行：" + toolName, null, toolName);
+                                toolRequest.arguments(), null, toolName);
                         trace.add(createTraceNode("tool_call", toolRequest.arguments(), toolName, null));
 
                         String result;
@@ -429,7 +429,7 @@ public class AgentWorkflowService {
 
                         // 发送 tool_result 事件
                         sendMessagesUtils.sendEvent(session, "tool_result",
-                                "工具执行完毕", truncateResult(result), toolName);
+                                result, null, toolName);
                         trace.add(createTraceNode("tool_result", result, toolName, null));
 
                         ToolExecutionResultMessage resultMessage = ToolExecutionResultMessage.from(toolRequest, result);
