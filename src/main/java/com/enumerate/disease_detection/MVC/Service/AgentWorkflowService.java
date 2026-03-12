@@ -369,9 +369,8 @@ public class AgentWorkflowService {
             messages.add(SystemMessage.from(buildSystemPrompt(userId)));
             messages.addAll(chatMemory.messages());
 
-            // 发送初始思考状态
+            // 发送初始思考状态（仅推送前端，不存trace）
             sendMessagesUtils.sendEvent(session, "thought", "正在分析您的问题...");
-            trace.add(createTraceNode("thought", "正在分析您的问题..."));
 
             boolean finalAnswerSent = false;
             String finalContent = null;
@@ -411,9 +410,9 @@ public class AgentWorkflowService {
                         log.info("调用工具: {} | 参数: {}", toolName, toolRequest.arguments());
 
                         // 发送 tool_call 事件
-                        sendMessagesUtils.sendEvent(session, "tool_call", 
+                        sendMessagesUtils.sendEvent(session, "tool_call",
                                 "正在执行：" + toolName, null, toolName);
-                        trace.add(createTraceNode("tool_call", "执行工具: " + toolName, toolName, toolRequest.arguments()));
+                        trace.add(createTraceNode("tool_call", toolRequest.arguments(), toolName, null));
 
                         String result;
                         try {
@@ -429,9 +428,9 @@ public class AgentWorkflowService {
                         }
 
                         // 发送 tool_result 事件
-                        sendMessagesUtils.sendEvent(session, "tool_result", 
+                        sendMessagesUtils.sendEvent(session, "tool_result",
                                 "工具执行完毕", truncateResult(result), toolName);
-                        trace.add(createTraceNode("tool_result", "工具执行完毕", toolName, result));
+                        trace.add(createTraceNode("tool_result", result, toolName, null));
 
                         ToolExecutionResultMessage resultMessage = ToolExecutionResultMessage.from(toolRequest, result);
                         messages.add(resultMessage);
