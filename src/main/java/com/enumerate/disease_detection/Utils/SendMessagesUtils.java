@@ -23,7 +23,7 @@ public class SendMessagesUtils {
      * @param payload 结构化数据 (可选)
      * @param tool    工具标识符 (仅对 tool_call, tool_result 有效)
      */
-    public void sendEvent(WebSocketSession session, String type, String content, Object payload, String tool) {
+    public void sendEvent(WebSocketSession session, String type, String content, Object payload, String tool, String actionId) {
         if (session == null || !session.isOpen()) return;
 
         Map<String, Object> messageMap = new HashMap<>();
@@ -39,21 +39,32 @@ public class SendMessagesUtils {
             messageMap.put("tool", tool);
         }
 
+        if (actionId != null && !actionId.isEmpty()) {
+            messageMap.put("actionId", actionId);
+        }
+
         com.enumerate.disease_detection.MVC.Controller.ChatWebSocketHandler.sendMessage(session, messageMap);
     }
 
     /**
-     * 简化的发送方法 (无 payload 和 tool)
+     * 简化的发送方法 (无 payload, tool, actionId)
      */
     public void sendEvent(WebSocketSession session, String type, String content) {
-        this.sendEvent(session, type, content, null, null);
+        this.sendEvent(session, type, content, null, null, null);
     }
 
     /**
      * 发送包含内容和 payload 的方法
      */
     public void sendEvent(WebSocketSession session, String type, String content, Object payload) {
-        this.sendEvent(session, type, content, payload, null);
+        this.sendEvent(session, type, content, payload, null, null);
+    }
+
+    /**
+     * 发送包含内容、payload 和 tool 的方法
+     */
+    public void sendEvent(WebSocketSession session, String type, String content, Object payload, String tool) {
+        this.sendEvent(session, type, content, payload, tool, null);
     }
 
 

@@ -15,6 +15,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -88,14 +89,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
             } else if ("user_confirm".equals(type)) { // 用户确认
                 String actionId = json.getString("actionId");
-                JSONObject data = json.getJSONObject("data");
+                JSONObject payloadData = json.getJSONObject("payload");
                 if (actionId != null) {
-                    interactionManager.handleResponse(actionId, data);
+                    interactionManager.handleResponse(actionId, payloadData);
                 } else {
-                    log.warn("【WebSocket】收到 interaction_response 但缺少 actionId");
+                    log.warn("【WebSocket】收到 user_confirm 但缺少 actionId");
                 }
             } else if ("user_answer".equals(type)) { // 用户追问
-
+                String actionId = json.getString("actionId");
+                String content = json.getString("content");
+                if (actionId != null) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("content", content);
+                    interactionManager.handleResponse(actionId, response);
+                } else {
+                    log.warn("【WebSocket】收到 user_answer 但缺少 actionId");
+                }
             } else if ("heartbeat".equals(type)) { // 心跳
 
             }

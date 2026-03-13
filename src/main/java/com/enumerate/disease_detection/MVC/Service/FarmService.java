@@ -22,7 +22,7 @@ public class FarmService {
     public void add(FarmDTO farmDTO) {
         log.info("FarmService接收到的参数：【{}】", farmDTO);
         FarmPO farmPO = FarmPO.builder()
-                .area(farmDTO.getArea())
+                .area(Double.valueOf(farmDTO.getArea()))
                 .location(farmDTO.getLocation())
                 .name(farmDTO.getName())
                 .userId(UserContextHolder.getUserId())
@@ -35,7 +35,7 @@ public class FarmService {
         log.info("FarmService接收到的参数：【{}】", farmDTO);
         FarmPO farmPO = FarmPO.builder()
                 .id(Long.parseLong(farmId))
-                .area(farmDTO.getArea())
+                .area(Double.valueOf(farmDTO.getArea()))
                 .location(farmDTO.getLocation())
                 .name(farmDTO.getName())
                 .userId(UserContextHolder.getUserId())
@@ -66,7 +66,7 @@ public class FarmService {
 
         // 更新农场面积
         FarmPO farmPO1 = farmMapper.selectById(farmId);
-        farmPO1.setArea(String.valueOf(Float.parseFloat(farmPO1.getArea()) + Float.parseFloat(plotDTO.getArea())));
+        farmPO1.setArea(farmPO1.getArea() + plotDTO.getArea());
         farmMapper.updateById(farmPO1);
     }
 }

@@ -21,7 +21,7 @@ public class PlotPO {
     private Long farmId;
     private String name;
     private String cropType;
-    private String area;
+    private Double area;
     private String sowingDate;
     private String soilType;
     private String growthStage;

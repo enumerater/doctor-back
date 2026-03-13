@@ -24,6 +24,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -54,7 +55,7 @@ public class FarmController {
                 .userId(String.valueOf(q.getUserId()))
                 .name(q.getName())
                 .location(q.getLocation())
-                .area(q.getArea())
+                .area(String.valueOf(q.getArea()))
                 .plotCount(String.valueOf(q.getPlotCount()))
                 .plots(plotVOOMapper.selectList(new QueryWrapper<PlotVOO>().eq("farm_id", q.getId())))
                 .build()).toList();
@@ -82,7 +83,7 @@ public class FarmController {
                 .farmId(String.valueOf(q.getFarmId()))
                 .name(q.getName())
                 .cropType(q.getCropType())
-                .area(q.getArea())
+                .area(String.valueOf(q.getArea()))
                 .sowingDate(q.getSowingDate())
                 .soilType(q.getSoilType())
                 .growthStage(q.getGrowthStage())
@@ -95,7 +96,7 @@ public class FarmController {
                 .userId(String.valueOf(farmPO.getUserId()))
                 .name(farmPO.getName())
                 .location(farmPO.getLocation())
-                .area(farmPO.getArea())
+                .area(String.valueOf(farmPO.getArea()))
                 .plotCount(String.valueOf(farmPO.getPlotCount()))
                 .plots(plotVOList)
                 .build();
@@ -174,7 +175,7 @@ public class FarmController {
 
         // 更新农场面积
         FarmPO farmPO1 = farmMapper.selectById(farmId);
-        farmPO1.setArea(String.valueOf(Float.parseFloat(farmPO1.getArea()) + Float.parseFloat(plotDTO.getArea())));
+        farmPO1.setArea(farmPO1.getArea() + plotDTO.getArea());
         farmMapper.updateById(farmPO1);
         return Result.success("更新成功");
     }
@@ -192,7 +193,7 @@ public class FarmController {
 
         // 更新农场面积
         FarmPO farmPO1 = farmMapper.selectById(farmId);
-        farmPO1.setArea(String.valueOf(Float.parseFloat(farmPO1.getArea()) - Float.parseFloat(plotPO.getArea())));
+        farmPO1.setArea(farmPO1.getArea() - plotPO.getArea());
         farmMapper.updateById(farmPO1);
         return Result.success("删除成功");
     }

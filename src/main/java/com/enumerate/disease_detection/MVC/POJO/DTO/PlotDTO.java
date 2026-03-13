@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 public class PlotDTO {
     private String name;
     private String cropType;
-    private String area;
+    private Double area;
     private String sowingDate;
     private String soilType;
 }

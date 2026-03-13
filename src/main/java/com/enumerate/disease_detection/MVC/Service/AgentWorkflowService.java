@@ -7,6 +7,7 @@ import com.enumerate.disease_detection.Tools.DatabaseTool;
 import com.enumerate.disease_detection.Tools.RagTool;
 import com.enumerate.disease_detection.Tools.VisioTool;
 import com.enumerate.disease_detection.Tools.WebSearchTool;
+import com.enumerate.disease_detection.Tools.InteractionTool;
 import com.enumerate.disease_detection.MVC.Mapper.ChatMessageMapper;
 
 import com.enumerate.disease_detection.Utils.SendMessagesUtils;
@@ -62,6 +63,9 @@ public class AgentWorkflowService {
     private WebSearchTool webSearchTool;
 
     @Autowired
+    private InteractionTool interactionTool;
+
+    @Autowired
     private ChatMessageMapper chatMessageMapper;
 
     @Autowired
@@ -82,6 +86,7 @@ public class AgentWorkflowService {
         registerToolBean(ragTool);
         registerToolBean(databaseTool);
         registerToolBean(webSearchTool);
+        registerToolBean(interactionTool);
         log.info("ReAct Agent 初始化完成，已注册 {} 个内置工具: {}",
                 builtinToolSpecs.size(),
                 builtinExecutors.keySet());
@@ -275,15 +280,22 @@ public class AgentWorkflowService {
                 - **disease_knowledge**: 当需要查找特定病害的详细信息和防治方法时调用
                 - **knowledge_graph**: 当需要了解农作物、病虫害、农药、节气之间的关联关系或进行深度知识发现时调用
                 - **web_search**: 当需要最新的实时信息（政策、新闻、市场等）时调用
-                - **发起确认**: 当你发现用户有执行某项敏感操作（如：创建农场、删除记录）的意图时，必须先调用此工具向用户发起询问确认，得到同意后才能继续执行后续操作
-                - **创建农场**: 当用户同意创建农场后，调用此工具将农场信息插入数据库
+                - **confirm_action**: 当你想执行某项敏感或高危操作（如：创建农场、更新数据、删除记录等）时，必须先调用此工具向用户发起询问确认，返回"true"表示用户同意，"false"表示用户拒绝
+                - **ask_user**: 当执行某个操作缺少必要信息时（例如：用户想创建农场但没给面积），调用此工具向用户索取缺失的信息
+                - **create_farm**: 创建新农场。调用前需确保已获得用户确认。
+                - **update_farm**: 更新农场信息。调用前需确保已获得用户确认。
+                - **delete_farm**: 删除农场。调用前需确保已获得用户确认。
+                - **create_plot**: 创建新地块。调用前需确保已获得用户确认。
+                - **update_plot**: 更新地块信息。调用前需确保已获得用户确认。
+                - **delete_plot**: 删除地块。调用前需确保已获得用户确认。
                 
                 "1. **主动决策**：当用户提问需要实时信息（如天气、新闻、作物价格）时，请主动调用 `web_search` 工具，不要等待用户下指令。",
                 "2. **智能补全**：如果用户提问缺少关键背景（例如问‘今天天气怎么样’但没说地点），请先调用 `user_memory_search` 检索用户以往的背景信息，或调用 `farm_info` 查看其农场位置。",
-                "3. **身份意识**：当前用户的ID是 {{userId}}。在调用任何需要 userId 参数的工具时，请务必直接使用这个ID。",
-                "4. **双向互动**：如果你识别到用户想要'管理田间'、'记录农场'或直接说'我想创建一个农场'，请先思考是否已有该农场信息。如果没有，主动调用 `发起确认` 工具询问用户是否需要创建一个。如果用户同意，再通过对话引导用户提供农场名称、位置、面积等信息，最后调用 `创建农场` 工具完成操作。",
-                "5. **专业风格**：你依然是一名农学专家，回答应简洁、专业、易懂。对于不确定的信息，优先查工具，工具查不到再询问用户。",
-                "6. **多步思考**：如果需要，你可以连续调用多个工具（例如：先查记忆得到地点，再联网查天气）。"
+                "3. **身份意识**：当前用户的ID是 %d。在调用任何需要 userId 参数的工具时，请务必直接使用这个ID。",
+                "4. **交互确认**：对于所有涉及数据的'增加'、'修改'或'删除'操作，你必须首先使用 `confirm_action` 工具征得用户同意。如果用户拒绝，则停止操作并告知用户。",
+                "5. **信息搜集**：如果用户发出的指令（如'帮我建个农场'）缺少关键参数，请先调用 `ask_user` 工具询问用户，搜集齐全后再请求确认并执行。",
+                "6. **专业风格**：你依然是一名农学专家，回答应简洁、专业、易懂。对于不确定的信息，优先查工具，工具查不到再询问用户。",
+                "7. **多步思考**：如果需要，你可以连续调用多个工具（例如：先追问信息，再请求确认，最后执行创建）。"
     
 
                 ## 个性化服务
@@ -309,7 +321,7 @@ public class AgentWorkflowService {
                 - 回答使用中文
                 - 保持专业但易懂的语言风格
                 - 如果信息不足以做出准确判断，如实告知用户并建议补充信息
-                """.formatted(userId);
+                """.formatted(userId, userId);
     }
 
     private String extractLastAiText(List<ChatMessage> messages) {
