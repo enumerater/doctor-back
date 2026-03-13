@@ -134,7 +134,8 @@ public class DatabaseTool {
         sb.append(String.format("共找到 %d 个农场：\n", farms.size()));
 
         for (FarmPO farm : farms) {
-            sb.append(String.format("\n【农场】%s | 位置: %s | 面积: %s | 地块数: %d\n",
+            sb.append(String.format("\n【农场】id: %s | %s | 位置: %s | 面积: %s | 地块数: %d\n",
+                    farm.getId(),
                     farm.getName(),
                     farm.getLocation() != null ? farm.getLocation() : "未知",
                     farm.getArea() != null ? farm.getArea() : "未知",
