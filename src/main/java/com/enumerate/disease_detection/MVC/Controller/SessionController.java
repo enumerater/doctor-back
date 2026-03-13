@@ -11,6 +11,7 @@ import com.enumerate.disease_detection.MVC.POJO.DTO.ChatSessionDTO;
 import com.enumerate.disease_detection.MVC.POJO.PO.ChatSessionPO;
 import com.enumerate.disease_detection.MVC.POJO.PO.UserPO;
 import com.enumerate.disease_detection.MVC.POJO.VO.SessionVO;
+import com.enumerate.disease_detection.MVC.Service.SessionSummaryService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,9 @@ public class SessionController {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private SessionSummaryService sessionSummaryService;
 
     @GetMapping
     @CrossOrigin
@@ -99,6 +103,9 @@ public class SessionController {
         chatSessionPO.setSessionId(chatSessionDTO.getSessionId());
 
         sessionMapper.insert(chatSessionPO);
+
+        // 启动异步任务生成标题摘要
+        sessionSummaryService.generateSummary(chatSessionDTO.getSessionId());
 
         //更新User
         // 核心提取逻辑
