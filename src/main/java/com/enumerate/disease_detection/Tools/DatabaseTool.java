@@ -147,7 +147,8 @@ public class DatabaseTool {
 
             if (!plots.isEmpty()) {
                 for (PlotPO plot : plots) {
-                    sb.append(String.format("  - 地块: %s | 作物: %s | 面积: %s | 播种日期: %s | 土壤: %s | 生长阶段: %s\n",
+                    sb.append(String.format("  - 地块:id: %s | %s | 作物: %s | 面积: %s | 播种日期: %s | 土壤: %s | 生长阶段: %s\n",
+                            plot.getId(),
                             plot.getName() != null ? plot.getName() : "未命名",
                             plot.getCropType() != null ? plot.getCropType() : "未知",
                             plot.getArea() != null ? plot.getArea() : "未知",

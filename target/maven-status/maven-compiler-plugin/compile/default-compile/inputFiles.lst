@@ -6,6 +6,7 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Configurations\GlobalExceptionHandler.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Configurations\MyBatisPlusConfig.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Configurations\OSSConfig.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Configurations\RestTemplateConfig.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Configurations\WebMvcConfig.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Configurations\WebSocketConfig.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Constant\AgentSessionStatusConstant.java
@@ -40,6 +41,7 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Controller\OSSController.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Controller\PlotAccumulatedTempController.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Controller\PlotDiagnosisController.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Controller\PlotManagementController.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Controller\SessionController.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Controller\TestController.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Controller\ToolsController.java
@@ -53,12 +55,14 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\DiseasesMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\FarmMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\FeedbackMapper.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\FieldNoteMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\KgLinksMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\KgNodesMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\MemoryMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\MemoryProcessLogMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\NotificationMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\PesticideMapper.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\PesticideRecordMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\PicMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\PlotDiagnosisMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\PlotMapper.java
@@ -71,6 +75,7 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Mapper\VectorStoreMapper.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\DTO\AgentMessageDTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\DTO\AgentStep.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\DTO\AiGenerateNoteDTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\DTO\AnnouncementGenerateDTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\DTO\AnnouncementPublishDTO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\DTO\AnnouncementReadDTO.java
@@ -103,12 +108,14 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\DiseasesPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\FarmPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\FeedbackPO.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\FieldNotePO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\KgLinksPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\KgNodesPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\MemoryPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\MemoryProcessLogPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\NotificationPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\PesticidePO.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\PesticideRecordPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\PlotDiagnosisPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\PlotPO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\PO\PlotStagePO.java
@@ -155,6 +162,9 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\VO\ToolsVO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\VO\UserLoginVO.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\VO\VisionVO.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\VO\Weather\GeoResponse.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\VO\Weather\Weather7dResponse.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\POJO\VO\Weather\WeatherNowResponse.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\AdminService.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\AgentWorkflowService.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\AnnouncementService.java
@@ -165,6 +175,7 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\FarmService.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\FeedbackService.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\Impl\PlotAccumulatedTempServiceImpl.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\Impl\PlotManagementServiceImpl.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\Impl\WeatherServiceImpl.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\InteractionManager.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\KnowledgeService.java
@@ -174,6 +185,7 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\MessageService.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\NotificationService.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\PlotAccumulatedTempService.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\PlotManagementService.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\RedisService.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\TestService.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\MVC\Service\UserService.java
@@ -182,6 +194,7 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Properties\JwtProperties.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Tools\DatabaseTool.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Tools\IdsDeserializer.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Tools\InteractionTool.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Tools\RagTool.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Tools\VisioTool.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Tools\WebSearchTool.java
@@ -191,5 +204,6 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Utils\MysqlEmbeddingStore.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Utils\ObjectToStringDeserializer.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Utils\OSSUtil.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Utils\SendMessagesUtils.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Utils\TimeAutoFillHandler.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Utils\ToolApiClient.java
