@@ -23,6 +23,7 @@ E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detecti
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\Local\UserContextHolder.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\ModelInterfaces\AnnouncementGenerate.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\ModelInterfaces\Assistant.java
+E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\ModelInterfaces\CommonAssisant.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\ModelInterfaces\RequestCategory.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\ModelInterfaces\SearchAssisant.java
 E:\java_main\codes\disease_detection\src\main\java\com\enumerate\disease_detection\ModelInterfaces\VisionAssisant.java

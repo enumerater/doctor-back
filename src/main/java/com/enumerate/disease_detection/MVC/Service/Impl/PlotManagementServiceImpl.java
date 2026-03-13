@@ -7,7 +7,9 @@ import com.enumerate.disease_detection.MVC.Mapper.FieldNoteMapper;
 import com.enumerate.disease_detection.MVC.POJO.PO.PesticideRecordPO;
 import com.enumerate.disease_detection.MVC.POJO.PO.FieldNotePO;
 import com.enumerate.disease_detection.MVC.Service.PlotManagementService;
+import com.enumerate.disease_detection.ModelInterfaces.AnnouncementGenerate;
 import com.enumerate.disease_detection.ModelInterfaces.Assistant;
+import com.enumerate.disease_detection.ModelInterfaces.CommonAssisant;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
@@ -31,9 +33,11 @@ public class PlotManagementServiceImpl implements PlotManagementService {
     @Autowired
     private FieldNoteMapper fieldNoteMapper;
 
-    @Autowired
-    @Qualifier("tongYiModel")
-    private OpenAiChatModel chatModel;
+    @Resource(name = "tongYiStreamingModel")
+    private StreamingChatModel tongYiStreamingModel;
+
+    @Resource(name = "tongYiModel")
+    private OpenAiChatModel tongYiModel;
 
     @Override
     public List<PesticideRecordPO> getPesticideRecords(Long plotId) {
@@ -83,8 +87,6 @@ public class PlotManagementServiceImpl implements PlotManagementService {
         fieldNoteMapper.deleteById(noteId);
     }
 
-    @Resource(name = "tongYiStreamingModel")
-    private StreamingChatModel tongYiStreamingModel;
 
     @Override
     public String generateFieldNote(Long plotId, String theme, List<String> keywords, Map<String, Object> context) {
@@ -108,8 +110,11 @@ public class PlotManagementServiceImpl implements PlotManagementService {
 
         log.info("AI生成随笔请求: {}", prompt);
 
-        Assistant assistant = AiServices.create(Assistant.class, tongYiStreamingModel);
-        return assistant.chat(prompt.toString());
+        CommonAssisant aiServices = AiServices.builder(CommonAssisant.class)
+                .chatModel(tongYiModel)
+                .build();
+
+        return aiServices.chat(prompt.toString());
     }
 
     @Override

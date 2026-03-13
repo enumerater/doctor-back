@@ -172,6 +172,7 @@ com\enumerate\disease_detection\MVC\Service\AdminService.class
 com\enumerate\disease_detection\MVC\Service\MemoryScheduledService.class
 com\enumerate\disease_detection\MVC\POJO\VO\AnnouncementReadVO$AnnouncementReadVOBuilder.class
 com\enumerate\disease_detection\MVC\POJO\VO\FarmDetailVO.class
+com\enumerate\disease_detection\ModelInterfaces\CommonAssisant.class
 com\enumerate\disease_detection\MVC\POJO\VO\PlotVO$PlotVOBuilder.class
 com\enumerate\disease_detection\MVC\Controller\MemoryProcessLogController.class
 com\enumerate\disease_detection\MVC\POJO\VO\PicVO.class
