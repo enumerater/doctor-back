@@ -118,16 +118,16 @@ public class PlotManagementServiceImpl implements PlotManagementService {
     }
 
     @Override
-    public void updatePesticide(Long plotId, Long id, PesticideRecordPO record) {
-        record.setId( id);
-        record.setPlotId(plotId);
+    public void updatePesticide(String plotId, String id, PesticideRecordPO record) {
+        record.setId(Long.valueOf(id));
+        record.setPlotId(Long.valueOf(plotId));
         pesticideRecordMapper.update(record, new QueryWrapper<PesticideRecordPO>().eq("id", id).eq("plot_id", plotId));
     }
 
     @Override
-    public void updateFieldNote(Long plotId, Long id, FieldNotePO record) {
-        record.setId( id);
-        record.setPlotId(plotId);
+    public void updateFieldNote(String plotId, String id, FieldNotePO record) {
+        record.setId(Long.valueOf(id));
+        record.setPlotId(Long.valueOf(plotId));
         fieldNoteMapper.update(record, new QueryWrapper<FieldNotePO>().eq("id", id).eq("plot_id", plotId));
     }
 

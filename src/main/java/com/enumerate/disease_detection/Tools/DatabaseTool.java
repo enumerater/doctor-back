@@ -7,12 +7,11 @@ import com.enumerate.disease_detection.MVC.POJO.PO.DiagnosisPO;
 import com.enumerate.disease_detection.MVC.POJO.PO.DiseasesPO;
 import com.enumerate.disease_detection.MVC.POJO.PO.FarmPO;
 import com.enumerate.disease_detection.MVC.POJO.PO.PlotPO;
-import com.enumerate.disease_detection.MVC.Mapper.DiagnosisMapper;
-import com.enumerate.disease_detection.MVC.Mapper.DiseasesMapper;
-import com.enumerate.disease_detection.MVC.Mapper.FarmMapper;
-import com.enumerate.disease_detection.MVC.Mapper.PlotMapper;
+import com.enumerate.disease_detection.MVC.Mapper.*;
+import com.enumerate.disease_detection.MVC.POJO.PO.*;
 import com.enumerate.disease_detection.MVC.POJO.VO.KgGraphVO;
 import com.enumerate.disease_detection.MVC.Service.KnowledgeService;
+import com.enumerate.disease_detection.MVC.Service.PlotManagementService;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,6 +42,178 @@ public class DatabaseTool {
 
     @Autowired
     private KnowledgeService knowledgeService;
+
+    @Autowired
+    private PlotManagementService plotManagementService;
+
+    @Autowired
+    private NotificationMapper notificationMapper;
+
+    @Autowired
+    private FieldNoteMapper fieldNoteMapper;
+
+    @Autowired
+    private PesticideRecordMapper pesticideRecordMapper;
+
+    // ... (keep searchKnowledgeGraph, queryDiagnosisHistory, queryUserFarmInfo, createFarm, updateFarm, deleteFarm, createPlot, updatePlot, deletePlot)
+
+    @Tool("查询地块的施药记录。当用户想了解某个地块过去用了什么药、用药量、效果如何时调用。")
+    @ToolName("query_pesticide_records")
+    public String queryPesticideRecords(@P("地块ID") String plotId) {
+        log.info("工具调用: 查询施药记录, plotId={}", plotId);
+        List<PesticideRecordPO> records = plotManagementService.getPesticideRecords(Long.valueOf(plotId));
+        if (records.isEmpty()) return "该地块暂无施药记录。";
+        
+        StringBuilder sb = new StringBuilder("施药记录：\n");
+        for (PesticideRecordPO r : records) {
+            sb.append(String.format("- ID: %d | 日期: %s | 药名: %s | 分类: %s | 用量: %s %s | 目的: %s | 评价: %s/5\n",
+                    r.getId(), r.getApplicationDate(), r.getMedicineName(), r.getCategory(),
+                    r.getDosage(), r.getUnit(), r.getPurpose(), 
+                    r.getEffectEvaluation() != null ? r.getEffectEvaluation() : "未评价"));
+        }
+        return sb.toString();
+    }
+
+    @Tool("添加施药记录。需要地块ID、药剂名称、分类（杀虫剂/杀菌剂/除草剂/肥料）、用量、单位、施用日期（YYYY-MM-DD）等。调用前请先确认。")
+    @ToolName("add_pesticide_record")
+    public String addPesticideRecord(
+            @P("地块ID") String plotId,
+            @P("药剂名称") String medicineName,
+            @P("分类") String category,
+            @P("用量") String dosage,
+            @P("单位") String unit,
+            @P("施用日期 (YYYY-MM-DD)") String date,
+            @P("施用目的") String purpose) {
+        log.info("工具调用: 添加施药记录, plotId={}, medicineName={}", plotId, medicineName);
+        PesticideRecordPO record = PesticideRecordPO.builder()
+                .plotId(Long.valueOf(plotId))
+                .medicineName(medicineName)
+                .category(category)
+                .dosage(Float.valueOf(dosage))
+                .unit(unit)
+                .applicationDate(LocalDate.parse(date))
+                .purpose(purpose)
+                .build();
+        plotManagementService.addPesticideRecord(Long.valueOf(plotId), record);
+        return "施药记录已成功添加。";
+    }
+
+    @Tool("更新施药记录。可以修改药名、用量、评价等。调用前请先确认。")
+    @ToolName("update_pesticide_record")
+    public String updatePesticideRecord(
+            @P("记录ID") String recordId,
+            @P("地块ID") String plotId,
+            @P("药剂名称") String medicineName,
+            @P("用量") String dosage,
+            @P("效果评价(1-5)") String evaluation,
+            @P("评价备注") String remarks) {
+        log.info("工具调用: 更新施药记录, recordId={}", recordId);
+        PesticideRecordPO record = pesticideRecordMapper.selectById(recordId);
+        if (record == null) return "未找到该记录。";
+        if (medicineName != null) record.setMedicineName(medicineName);
+        if (dosage != null) record.setDosage(Float.valueOf(dosage));
+        if (evaluation != null) record.setEffectEvaluation(Integer.valueOf(evaluation));
+        if (remarks != null) record.setEffectRemarks(remarks);
+        plotManagementService.updatePesticide(plotId, recordId, record);
+        return "施药记录已更新。";
+    }
+
+    @Tool("删除施药记录。需要记录ID。调用前请先确认。")
+    @ToolName("delete_pesticide_record")
+    public String deletePesticideRecord(@P("记录ID") Long recordId) {
+        log.info("工具调用: 删除施药记录, recordId={}", recordId);
+        plotManagementService.deletePesticide(recordId);
+        return "施药记录已删除。";
+    }
+
+    @Tool("查询地块的田间随笔。可以按月份筛选（YYYY-MM）。")
+    @ToolName("query_field_notes")
+    public String queryFieldNotes(
+            @P("地块ID") String plotId,
+            @P("查询月份 (YYYY-MM)，为空则查询所有") String month) {
+        log.info("工具调用: 查询田间随笔, plotId={}, month={}", plotId, month);
+        var page = plotManagementService.getFieldNotes(Long.valueOf(plotId), month, 1, 50);
+        List<FieldNotePO> notes = page.getRecords();
+        if (notes.isEmpty()) return "该地块暂无随笔。";
+        
+        StringBuilder sb = new StringBuilder("田间随笔：\n");
+        for (FieldNotePO n : notes) {
+            sb.append(String.format("- ID: %d | 日期: %s | 天气: %s | 内容: %s\n",
+                    n.getId(), n.getDate(), n.getWeatherInfo(), n.getContent()));
+        }
+        return sb.toString();
+    }
+
+    @Tool("添加田间随笔。需要地块ID、随笔内容、日期（YYYY-MM-DD）。调用前请先确认。")
+    @ToolName("add_field_note")
+    public String addFieldNote(
+            @P("地块ID") String plotId,
+            @P("随笔内容") String content,
+            @P("日期 (YYYY-MM-DD)") String date,
+            @P("天气信息") String weather) {
+        log.info("工具调用: 添加随笔, plotId={}", plotId);
+        FieldNotePO note = FieldNotePO.builder()
+                .plotId(Long.valueOf(plotId))
+                .content(content)
+                .date(LocalDate.parse(date))
+                .weatherInfo(weather)
+                .isAiGenerated(false)
+                .build();
+        plotManagementService.addFieldNote(Long.valueOf(plotId), note);
+        return "随笔已成功添加。";
+    }
+
+    @Tool("更新田间随笔。可以修改内容。调用前请先确认。")
+    @ToolName("update_field_note")
+    public String updateFieldNote(
+            @P("随笔ID") String noteId,
+            @P("地块ID") String plotId,
+            @P("新内容") String content) {
+        log.info("工具调用: 更新随笔, noteId={}", noteId);
+        FieldNotePO note = fieldNoteMapper.selectById(noteId);
+        if (note == null) return "未找到该随笔。";
+        note.setContent(content);
+        plotManagementService.updateFieldNote(plotId, noteId, note);
+        return "随笔内容已更新。";
+    }
+
+    @Tool("删除田间随笔。需要随笔ID。调用前请先确认。")
+    @ToolName("delete_field_note")
+    public String deleteFieldNote(@P("随笔ID") String noteId) {
+        log.info("工具调用: 删除随笔, noteId={}", noteId);
+        plotManagementService.deleteFieldNote(Long.valueOf(noteId));
+        return "随笔已删除。";
+    }
+
+    @Tool("查询用户的通知。可以了解病害预警、系统通知等。")
+    @ToolName("query_notifications")
+    public String queryNotifications(@P("用户ID") String userId) {
+        log.info("工具调用: 查询通知, userId={}", userId);
+        List<NotificationPO> notifications = notificationMapper.selectList(new QueryWrapper<NotificationPO>()
+                .eq("user_id", userId)
+                .orderByDesc("created_at")
+                .last("LIMIT 20"));
+        
+        if (notifications.isEmpty()) return "暂无通知。";
+        
+        StringBuilder sb = new StringBuilder("通知列表：\n");
+        for (NotificationPO n : notifications) {
+            sb.append(String.format("- ID: %d | [%s] %s: %s | 状态: %s | 时间: %s\n",
+                    n.getId(), n.getType(), n.getTitle(), n.getContent(),
+                    (n.getIsRead() != null && n.getIsRead()) ? "已读" : "未读",
+                    n.getCreatedAt()));
+        }
+        return sb.toString();
+    }
+
+    @Tool("删除通知。需要通知ID。调用前请先确认。")
+    @ToolName("delete_notification")
+    public String deleteNotification(@P("通知ID") String notificationId) {
+        log.info("工具调用: 删除通知, notificationId={}", notificationId);
+        int result = notificationMapper.deleteById(notificationId);
+        return result > 0 ? "通知已删除。" : "删除失败，未找到该通知。";
+    }
+
 
     @Tool("搜索农业知识图谱，查找特定作物（如柑橘）下的关键词及其关联的知识点（如病害、药剂、节气等）。当需要了解节点之间的关系或进行深度关联分析时调用。")
     @ToolName("knowledge_graph")
@@ -86,14 +259,14 @@ public class DatabaseTool {
     @Tool("查询用户的历史诊断记录，可以了解用户过去的作物病害诊断情况，包括作物类型、病害名称、严重程度、诊断时间等。当用户询问'我之前的诊断记录'、'历史检测结果'、'上次诊断'等问题时应调用此工具。")
     @ToolName("diagnosis_history")
     public String queryDiagnosisHistory(
-            @P("用户ID") Long userId,
-            @P("返回的最大记录数，默认10") int limit) {
+            @P("用户ID") String userId,
+            @P("返回的最大记录数，默认10") String limit) {
         log.info("工具调用: 查询诊断历史, userId={}, limit={}", userId, limit);
 
         LambdaQueryWrapper<DiagnosisPO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DiagnosisPO::getUserId, userId)
                 .orderByDesc(DiagnosisPO::getCreatedAt)
-                .last("LIMIT " + Math.min(limit, 50));
+                .last("LIMIT " + Math.min(Integer.parseInt(limit), 50));
 
         List<DiagnosisPO> records = diagnosisMapper.selectList(wrapper);
 
@@ -168,14 +341,14 @@ public class DatabaseTool {
     public String createFarm(
             @P("农场名称") String name,
             @P("农场位置") String location,
-            @P("农场面积（只提取数字，单位默认为'亩'。如果用户说'100亩'，请提取数值100；如果用户只说数字，则视为'亩'）") Double area,
+            @P("农场面积（只提取数字，单位默认为'亩'。如果用户说'100亩'，请提取数值100；如果用户只说数字，则视为'亩'）") String area,
             @P("用户ID") String userId) {
         log.info("工具调用: 创建农场, name={}, location={}, area={}, userId={}", name, location, area, userId);
         
         FarmPO farm = FarmPO.builder()
                 .name(name)
                 .location(location)
-                .area(area)
+                .area(Double.valueOf(area))
                 .userId(Long.valueOf(userId))
                 .plotCount(0)
                 .createdAt(java.time.LocalDateTime.now())
@@ -193,10 +366,10 @@ public class DatabaseTool {
     @Tool("更新农场信息。当用户想要修改现有农场的名称、位置或面积时调用。调用此工具前，应确保已经通过'confirm_action'工具获得了用户的确认。")
     @ToolName("update_farm")
     public String updateFarm(
-            @P("农场ID") Long farmId,
+            @P("农场ID") String farmId,
             @P("新农场名称") String name,
             @P("新农场位置") String location,
-            @P("新农场面积") Double area) {
+            @P("新农场面积") String area) {
         log.info("工具调用: 更新农场, farmId={}, name={}, location={}, area={}", farmId, name, location, area);
         
         FarmPO farm = farmMapper.selectById(farmId);
@@ -204,7 +377,7 @@ public class DatabaseTool {
         
         if (name != null) farm.setName(name);
         if (location != null) farm.setLocation(location);
-        if (area != null) farm.setArea(area);
+        if (area != null) farm.setArea(Double.valueOf(area));
         farm.setUpdatedAt(java.time.LocalDateTime.now());
         
         int result = farmMapper.updateById(farm);
@@ -213,7 +386,7 @@ public class DatabaseTool {
 
     @Tool("删除农场。这是一个高危操作，会删除农场及其下的所有地块。必须在获得用户明确确认后才能调用。")
     @ToolName("delete_farm")
-    public String deleteFarm(@P("农场ID") Long farmId) {
+    public String deleteFarm(@P("农场ID") String farmId) {
         log.info("工具调用: 删除农场, farmId={}", farmId);
         
         // 查找农场
@@ -237,7 +410,7 @@ public class DatabaseTool {
             @P("所属农场ID") String farmId,
             @P("地块名称") String name,
             @P("作物类型（如：小麦、玉米）") String cropType,
-            @P("地块面积") Double area,
+            @P("地块面积") String area,
             @P("播种日期（YYYY-MM-DD）") String sowingDate,
             @P("土壤类型（如：黑土、沙壤土）") String soilType) {
         log.info("工具调用: 创建地块, farmId={}, name={}, cropType={}", farmId, name, cropType);
@@ -246,7 +419,7 @@ public class DatabaseTool {
                 .farmId(Long.valueOf(farmId))
                 .name(name)
                 .cropType(cropType)
-                .area(area)
+                .area(Double.valueOf(area))
                 .sowingDate(sowingDate)
                 .soilType(soilType)
                 .growthStage("播种期")
@@ -271,10 +444,10 @@ public class DatabaseTool {
     @Tool("更新地块信息。可以修改地块名称、作物类型、面积、播种日期、土壤类型、生长阶段等。调用此工具前，应确保已经通过'confirm_action'工具获得了用户的确认。")
     @ToolName("update_plot")
     public String updatePlot(
-            @P("地块ID") Long plotId,
+            @P("地块ID") String plotId,
             @P("新地块名称") String name,
             @P("新作物类型") String cropType,
-            @P("新地块面积") Double area,
+            @P("新地块面积") String area,
             @P("新播种日期") String sowingDate,
             @P("新土壤类型") String soilType,
             @P("新生长阶段") String growthStage) {
@@ -285,7 +458,7 @@ public class DatabaseTool {
         
         if (name != null) plot.setName(name);
         if (cropType != null) plot.setCropType(cropType);
-        if (area != null) plot.setArea(area);
+        if (area != null) plot.setArea(Double.valueOf(area));
         if (sowingDate != null) plot.setSowingDate(sowingDate);
         if (soilType != null) plot.setSoilType(soilType);
         if (growthStage != null) plot.setGrowthStage(growthStage);
@@ -297,7 +470,7 @@ public class DatabaseTool {
 
     @Tool("删除地块。这是一个高危操作，必须在获得用户明确确认后才能调用。")
     @ToolName("delete_plot")
-    public String deletePlot(@P("地块ID") Long plotId) {
+    public String deletePlot(@P("地块ID") String plotId) {
         log.info("工具调用: 删除地块, plotId={}", plotId);
         
         PlotPO plot = plotMapper.selectById(plotId);

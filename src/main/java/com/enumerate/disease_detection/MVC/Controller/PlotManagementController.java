@@ -48,8 +48,8 @@ public class PlotManagementController {
 
     @PutMapping("/plots/{plotId}/pesticide-records/{id}")
     public Result<String> updatePesticide(
-            @PathVariable Long plotId,
-            @PathVariable Long id,
+            @PathVariable String plotId,
+            @PathVariable String id,
             @RequestBody PesticideRecordPO record) {
         plotManagementService.updatePesticide(plotId, id, record);
         return Result.success("修改成功");
@@ -92,8 +92,8 @@ public class PlotManagementController {
 
     @PutMapping("/plots/{plotId}/notes/{id}")
     public Result<String> updateFieldNote(
-            @PathVariable Long plotId,
-            @PathVariable Long id,
+            @PathVariable String plotId,
+            @PathVariable String id,
             @RequestBody FieldNotePO record) {
         plotManagementService.updateFieldNote(plotId, id, record);
         return Result.success("修改成功");

@@ -20,9 +20,9 @@ public interface PlotManagementService {
     // AI 生成
     String generateFieldNote(Long plotId, String theme, List<String> keywords, Map<String, Object> context);
 
-    void updatePesticide(Long plotId, Long id, PesticideRecordPO record);
+    void updatePesticide(String plotId, String id, PesticideRecordPO record);
 
-    void updateFieldNote(Long plotId, Long id, FieldNotePO record);
+    void updateFieldNote(String plotId, String id, FieldNotePO record);
 
     void deletePesticide(Long id);
 }
