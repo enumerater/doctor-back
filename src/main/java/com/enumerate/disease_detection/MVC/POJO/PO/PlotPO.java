@@ -26,8 +26,13 @@ public class PlotPO {
     private String soilType;
     private String growthStage;
 
+    // 数字孪生相关字段
+    private String status;
+    private Integer gridX;
+    private Integer gridY;
+    private Integer healthScore;
+
     @TableField(fill = FieldFill.INSERT)
-    // 修复3：推荐使用 LocalDateTime 替代 DateTime（兼容 MyBatis 自动映射）
     private LocalDateTime createdAt;
 
     @TableField(fill = FieldFill.UPDATE)
