@@ -34,6 +34,23 @@ public class MemoryScheduledService {
     @Autowired
     private MemoryExtractionService memoryExtractionService;
 
+    @Autowired
+    private MemoryCondensationService memoryCondensationService;
+
+    /**
+     * 每周日凌晨2点执行，浓缩过去一周的旧原子记忆
+     */
+    @Scheduled(cron = "0 0 2 ? * SUN")
+    public void runWeeklyMemoryCondensation() {
+        log.info("===== 开始每周记忆浓缩任务 =====");
+        try {
+            memoryCondensationService.condenseOldMemories();
+        } catch (Exception e) {
+            log.error("每周记忆浓缩任务失败", e);
+        }
+        log.info("===== 每周记忆浓缩任务完成 =====");
+    }
+
     /**
      * 每6小时执行一次，处理所有未提取记忆的会话
      */

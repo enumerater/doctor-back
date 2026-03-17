@@ -51,7 +51,61 @@ public class MemoryExtractionService {
             3. 用户使用大棚种植方式
             """;
 
+    private static final String CONDENSE_PROMPT = """
+            你是一个记忆浓缩专家。你的任务是将用户过去一周的一系列零碎记忆片段，合并并浓缩成更精简、更系统化的长期记忆。
+            
+            浓缩规则：
+            1. 去重：如果多条记忆描述的是同一件事（如：用户种番茄、用户家里种了番茄），合并为一条。
+            2. 提炼：将相关的零碎信息组合（如：用户在山东、用户在大棚种番茄 -> 用户在山东使用大棚种植番茄）。
+            3. 结构化：每条浓缩后的记忆必须是一句完整的陈述句。
+            4. 保持事实：不要编造任何信息，只基于提供的记忆片段。
+            5. 如果这些记忆片段没有任何价值，直接回复"无"。
+            
+            输出格式（严格遵守）：
+            1. 第一条浓缩记忆
+            2. 第二条浓缩记忆
+            """;
+
     private static final int MAX_CONVERSATION_LENGTH = 8000;
+
+    /**
+     * 浓缩旧记忆片段为长期总结
+     *
+     * @param oldMemories 原始零碎记忆列表
+     * @return 浓缩后的记忆列表
+     */
+    public List<String> condenseMemories(List<String> oldMemories) {
+        if (oldMemories == null || oldMemories.isEmpty()) {
+            return List.of();
+        }
+
+        StringBuilder combinedText = new StringBuilder();
+        for (int i = 0; i < oldMemories.size(); i++) {
+            combinedText.append(i + 1).append(". ").append(oldMemories.get(i)).append("\n");
+        }
+
+        List<ChatMessage> messages = new ArrayList<>();
+        messages.add(SystemMessage.from(CONDENSE_PROMPT));
+        messages.add(UserMessage.from("请浓缩以下旧记忆片段：\n\n" + combinedText));
+
+        ChatRequest request = ChatRequest.builder()
+                .messages(messages)
+                .build();
+
+        try {
+            ChatResponse response = tongYiModel.chat(request);
+            String output = response.aiMessage().text();
+
+            if (output == null || output.isBlank() || output.trim().equals("无")) {
+                return List.of();
+            }
+
+            return parseMemories(output);
+        } catch (Exception e) {
+            log.error("LLM浓缩记忆失败", e);
+            return List.of();
+        }
+    }
 
     /**
      * 从会话消息中提取记忆并存储
