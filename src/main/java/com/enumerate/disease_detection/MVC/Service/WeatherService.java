@@ -2,6 +2,7 @@ package com.enumerate.disease_detection.MVC.Service;
 
 import com.enumerate.disease_detection.MVC.POJO.VO.DailyTempRecordVO;
 import java.util.List;
+import java.util.Map;
 
 public interface WeatherService {
     /**
@@ -20,4 +21,12 @@ public interface WeatherService {
      * @return 每日气温预报
      */
     List<DailyTempRecordVO> getWeatherForecast(String location, int days);
+
+
+    /**
+     * 获取指定地点的实时温度和湿度
+     * @param location 地点名称
+     * @return 包含 "temp" 和 "humidity" 的 Map
+     */
+    Map<String, Double> getCurrentTempAndHum(String location);
 }

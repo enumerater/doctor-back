@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -260,5 +261,55 @@ public class WeatherServiceImpl implements WeatherService {
             log.error("获取天气预报失败", e);
         }
         return records;
+    }
+
+
+    @Override
+    public Map<String, Double> getCurrentTempAndHum(String location) {
+        // 设置默认兜底值
+        Map<String, Double> result = new java.util.HashMap<>();
+        result.put("temp", 22.0);
+        result.put("humidity", 65.0);
+
+        String locationId = getLocationId(location);
+        if (locationId == null) {
+            log.error("无法获取LocationID，使用默认温湿度");
+            return result;
+        }
+
+        try {
+            java.net.URI uri = UriComponentsBuilder.fromHttpUrl(qweatherHost + weatherNowPath)
+                    .queryParam("location", locationId)
+                    .build()
+                    .encode()
+                    .toUri();
+
+            HttpEntity<Void> requestEntity = new HttpEntity<>(buildAuthHeaders());
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                    uri, HttpMethod.GET, requestEntity, byte[].class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                byte[] body = response.getBody();
+                String contentEncoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
+                if ("gzip".equalsIgnoreCase(contentEncoding) || isGzip(body)) {
+                    body = ZipUtil.unGzip(body);
+                }
+
+                String responseStr = new String(body, StandardCharsets.UTF_8);
+                com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                WeatherNowResponse nowResponse = objectMapper.readValue(responseStr, WeatherNowResponse.class);
+
+                if ("200".equals(nowResponse.getCode()) && nowResponse.getNow() != null) {
+                    // 获取真实的温度和湿度
+                    result.put("temp", Double.parseDouble(nowResponse.getNow().getTemp()));
+                    result.put("humidity", Double.parseDouble(nowResponse.getNow().getHumidity()));
+                    log.info("成功获取【{}】真实天气：温度 {}℃，湿度 {}%", location, result.get("temp"), result.get("humidity"));
+                }
+            }
+        } catch (Exception e) {
+            log.error("获取实时温湿度失败，使用默认值", e);
+        }
+        return result;
     }
 }
