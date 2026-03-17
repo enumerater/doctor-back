@@ -2,6 +2,7 @@ package com.enumerate.disease_detection.Tools;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.enumerate.disease_detection.Annotations.ToolName;
 import com.enumerate.disease_detection.MVC.POJO.PO.DiagnosisPO;
 import com.enumerate.disease_detection.MVC.POJO.PO.DiseasesPO;
@@ -514,6 +515,20 @@ public class DatabaseTool {
                     ));
         }
         return sb.toString();
+    }
+
+    @Tool("删除用户设定的定时任务。")
+    @ToolName("delete_reminders")
+    public String deleteReminders(@P("任务ID") String reminderId) {
+        log.info("工具调用: 删除提醒, userId={}", reminderId);
+        userReminderMapper.update(new UpdateWrapper<UserReminderPO>().eq("id", reminderId).set("status", 0));
+
+        if (reminderId != null){
+            return "任务已删除。";
+        }
+        else{
+            return "任务删除失败。";
+        }
     }
 
 }

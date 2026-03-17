@@ -22,7 +22,15 @@ public class ReminderTool {
     @ToolName("create_reminder")
     public String createReminder(
             @P("提醒的具体内容") String content,
-            @P("Spring Cron表达式") String cron) {
+            @P("Spring Cron表达式## Cron 表达式规范\n" +
+                    "1. 格式：Spring标准6位（秒 分 时 日 月 周），取值：秒/分0-59、时0-23、日1-31、月1-12、周1-7（1=周日）；\n" +
+                    "2. 支持*、?、/、-、,，禁用年维度；\n" +
+                    "3. 农业场景默认：\n" +
+                    "   - 每日采集：0 0 6 * * ?\n" +
+                    "   - 每小时刷新：0 0 */1 * * ?\n" +
+                    "   - 每周周报：0 0 7 * * 2\n" +
+                    "   - 每月月报：0 0 8 1 * ?\n" +
+                    "4. 生成/解析时校验合法性，错误需修正并说明。") String cron) {
 
         // 1. 先尝试从 UserContextHolder 获取 (兼容普通的HTTP调用)
         Long userId = UserContextHolder.getUserId();
@@ -51,4 +59,5 @@ public class ReminderTool {
             return "任务创建失败：" + e.getMessage();
         }
     }
+
 }
