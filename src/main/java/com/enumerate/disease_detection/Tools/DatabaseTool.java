@@ -63,12 +63,12 @@ public class DatabaseTool {
         log.info("工具调用: 查询施药记录, plotId={}", plotId);
         List<PesticideRecordPO> records = plotManagementService.getPesticideRecords(Long.valueOf(plotId));
         if (records.isEmpty()) return "该地块暂无施药记录。";
-        
+
         StringBuilder sb = new StringBuilder("施药记录：\n");
         for (PesticideRecordPO r : records) {
             sb.append(String.format("- ID: %d | 日期: %s | 药名: %s | 分类: %s | 用量: %s %s | 目的: %s | 评价: %s/5\n",
                     r.getId(), r.getApplicationDate(), r.getMedicineName(), r.getCategory(),
-                    r.getDosage(), r.getUnit(), r.getPurpose(), 
+                    r.getDosage(), r.getUnit(), r.getPurpose(),
                     r.getEffectEvaluation() != null ? r.getEffectEvaluation() : "未评价"));
         }
         return sb.toString();
@@ -135,7 +135,7 @@ public class DatabaseTool {
         var page = plotManagementService.getFieldNotes(Long.valueOf(plotId), month, 1, 50);
         List<FieldNotePO> notes = page.getRecords();
         if (notes.isEmpty()) return "该地块暂无随笔。";
-        
+
         StringBuilder sb = new StringBuilder("田间随笔：\n");
         for (FieldNotePO n : notes) {
             sb.append(String.format("- ID: %d | 日期: %s | 天气: %s | 内容: %s\n",
@@ -193,9 +193,9 @@ public class DatabaseTool {
                 .eq("user_id", userId)
                 .orderByDesc("created_at")
                 .last("LIMIT 20"));
-        
+
         if (notifications.isEmpty()) return "暂无通知。";
-        
+
         StringBuilder sb = new StringBuilder("通知列表：\n");
         for (NotificationPO n : notifications) {
             sb.append(String.format("- ID: %d | [%s] %s: %s | 状态: %s | 时间: %s\n",
@@ -344,7 +344,7 @@ public class DatabaseTool {
             @P("农场面积（只提取数字，单位默认为'亩'。如果用户说'100亩'，请提取数值100；如果用户只说数字，则视为'亩'）") String area,
             @P("用户ID") String userId) {
         log.info("工具调用: 创建农场, name={}, location={}, area={}, userId={}", name, location, area, userId);
-        
+
         FarmPO farm = FarmPO.builder()
                 .name(name)
                 .location(location)
@@ -354,7 +354,7 @@ public class DatabaseTool {
                 .createdAt(java.time.LocalDateTime.now())
                 .updatedAt(java.time.LocalDateTime.now())
                 .build();
-        
+
         int result = farmMapper.insert(farm);
         if (result > 0) {
             return String.format("农场\"%s\"创建成功，ID为: %d", name, farm.getId());
@@ -371,15 +371,15 @@ public class DatabaseTool {
             @P("新农场位置") String location,
             @P("新农场面积") String area) {
         log.info("工具调用: 更新农场, farmId={}, name={}, location={}, area={}", farmId, name, location, area);
-        
+
         FarmPO farm = farmMapper.selectById(farmId);
         if (farm == null) return "未找到ID为" + farmId + "的农场。";
-        
+
         if (name != null) farm.setName(name);
         if (location != null) farm.setLocation(location);
         if (area != null) farm.setArea(Double.valueOf(area));
         farm.setUpdatedAt(java.time.LocalDateTime.now());
-        
+
         int result = farmMapper.updateById(farm);
         return result > 0 ? "农场信息更新成功。" : "农场信息更新失败。";
     }
@@ -388,19 +388,19 @@ public class DatabaseTool {
     @ToolName("delete_farm")
     public String deleteFarm(@P("农场ID") String farmId) {
         log.info("工具调用: 删除农场, farmId={}", farmId);
-        
+
         // 查找农场
         FarmPO farm = farmMapper.selectById(farmId);
         if (farm == null) return "未找到ID为" + farmId + "的农场。";
-        
+
         // 硬删除该农场下的所有地块
         LambdaQueryWrapper<PlotPO> plotWrapper = new LambdaQueryWrapper<>();
         plotWrapper.eq(PlotPO::getFarmId, farmId);
         plotMapper.delete(plotWrapper);
-        
+
         // 硬删除农场
         int result = farmMapper.deleteById(farmId);
-        
+
         return result > 0 ? "农场及其关联地块已成功彻底删除。" : "农场删除失败。";
     }
 
@@ -414,7 +414,7 @@ public class DatabaseTool {
             @P("播种日期（YYYY-MM-DD）") String sowingDate,
             @P("土壤类型（如：黑土、沙壤土）") String soilType) {
         log.info("工具调用: 创建地块, farmId={}, name={}, cropType={}", farmId, name, cropType);
-        
+
         PlotPO plot = PlotPO.builder()
                 .farmId(Long.valueOf(farmId))
                 .name(name)
@@ -426,7 +426,7 @@ public class DatabaseTool {
                 .createdAt(java.time.LocalDateTime.now())
                 .updatedAt(java.time.LocalDateTime.now())
                 .build();
-        
+
         int result = plotMapper.insert(plot);
         if (result > 0) {
             // 更新农场的地块数量
@@ -452,10 +452,10 @@ public class DatabaseTool {
             @P("新土壤类型") String soilType,
             @P("新生长阶段") String growthStage) {
         log.info("工具调用: 更新地块, plotId={}, name={}", plotId, name);
-        
+
         PlotPO plot = plotMapper.selectById(plotId);
         if (plot == null) return "未找到ID为" + plotId + "的地块。";
-        
+
         if (name != null) plot.setName(name);
         if (cropType != null) plot.setCropType(cropType);
         if (area != null) plot.setArea(Double.valueOf(area));
@@ -463,7 +463,7 @@ public class DatabaseTool {
         if (soilType != null) plot.setSoilType(soilType);
         if (growthStage != null) plot.setGrowthStage(growthStage);
         plot.setUpdatedAt(java.time.LocalDateTime.now());
-        
+
         int result = plotMapper.updateById(plot);
         return result > 0 ? "地块信息更新成功。" : "地块信息更新失败。";
     }
@@ -472,13 +472,13 @@ public class DatabaseTool {
     @ToolName("delete_plot")
     public String deletePlot(@P("地块ID") String plotId) {
         log.info("工具调用: 删除地块, plotId={}", plotId);
-        
+
         PlotPO plot = plotMapper.selectById(plotId);
         if (plot == null) return "未找到ID为" + plotId + "的地块。";
-        
+
         // 硬删除地块
         int result = plotMapper.deleteById(plotId);
-        
+
         if (result > 0) {
             // 更新农场的地块数量
             FarmPO farm = farmMapper.selectById(plot.getFarmId());
@@ -490,6 +490,30 @@ public class DatabaseTool {
         } else {
             return "地块删除失败。";
         }
+    }
+
+    @Autowired
+    private UserReminderMapper userReminderMapper;
+
+    @Tool("查询用户设定的定时任务。")
+    @ToolName("query_reminders")
+    public String queryReminders(@P("用户ID") String userId) {
+        log.info("工具调用: 查询提醒, userId={}", userId);
+        List<UserReminderPO> notifications = userReminderMapper.selectList(new QueryWrapper<UserReminderPO>()
+                .eq("user_id", userId)
+                .orderByDesc("created_at")
+                .eq("status", 1)
+                .last("LIMIT 20"));
+
+        if (notifications.isEmpty()) return "暂无通知。";
+
+        StringBuilder sb = new StringBuilder("通知列表：\n");
+        for (UserReminderPO n : notifications) {
+            sb.append(String.format("- ID: %d | content: %s | cron: %s | 时间: %s\n",
+                    n.getId(),n.getContent(),n.getCron(),n.getCreatedAt()
+                    ));
+        }
+        return sb.toString();
     }
 
 }

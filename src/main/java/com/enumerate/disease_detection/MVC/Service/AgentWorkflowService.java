@@ -3,11 +3,7 @@ package com.enumerate.disease_detection.MVC.Service;
 import com.enumerate.disease_detection.Annotations.ToolName;
 import com.enumerate.disease_detection.ChatModel.MainModel;
 import com.enumerate.disease_detection.MVC.Mapper.UserMapper;
-import com.enumerate.disease_detection.Tools.DatabaseTool;
-import com.enumerate.disease_detection.Tools.RagTool;
-import com.enumerate.disease_detection.Tools.VisioTool;
-import com.enumerate.disease_detection.Tools.WebSearchTool;
-import com.enumerate.disease_detection.Tools.InteractionTool;
+import com.enumerate.disease_detection.Tools.*;
 import com.enumerate.disease_detection.MVC.Mapper.ChatMessageMapper;
 
 import com.enumerate.disease_detection.Utils.SendMessagesUtils;
@@ -66,6 +62,10 @@ public class AgentWorkflowService {
     private InteractionTool interactionTool;
 
     @Autowired
+    private ReminderTool reminderTool;
+
+
+    @Autowired
     private ChatMessageMapper chatMessageMapper;
 
     @Autowired
@@ -87,6 +87,7 @@ public class AgentWorkflowService {
         registerToolBean(databaseTool);
         registerToolBean(webSearchTool);
         registerToolBean(interactionTool);
+        registerToolBean(reminderTool);
         log.info("ReAct Agent 初始化完成，已注册 {} 个内置工具: {}",
                 builtinToolSpecs.size(),
                 builtinExecutors.keySet());
@@ -288,6 +289,7 @@ public class AgentWorkflowService {
                 - **create_plot**: 创建新地块。调用前需确保已获得用户确认。
                 - **update_plot**: 更新地块信息。调用前需确保已获得用户确认。
                 - **delete_plot**: 删除地块。调用前需确保已获得用户确认。
+                - **query_reminders**: 当用户询问自己的定时任务、提醒信息时调用
                 
                 "1. **主动决策**：当用户提问需要实时信息（如天气、新闻、作物价格）时，请主动调用 `web_search` 工具，不要等待用户下指令。",
                 "2. **智能补全**：如果用户提问缺少关键背景（例如问‘今天天气怎么样’但没说地点），请先调用 `user_memory_search` 检索用户以往的背景信息，或调用 `farm_info` 查看其农场位置。",
