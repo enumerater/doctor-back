@@ -190,7 +190,7 @@ public class KnowledgeService {
             nodeWrapper.in(KgNodesPO::getType, categories);
         }
 
-        nodes = kgNodesMapper.selectList(nodeWrapper);
+        nodes = kgNodesMapper.selectList(nodeWrapper.last("LIMIT 50"));
 
         if (nodes.isEmpty() && !StringUtils.hasText(keyword) && (categories == null || categories.isEmpty())) {
             // 兜底策略：如果图谱库没数据，按当前作物名动态生成简版图谱
@@ -199,7 +199,7 @@ public class KnowledgeService {
 
         if (!nodes.isEmpty()) {
             links = kgLinksMapper.selectList(new LambdaQueryWrapper<KgLinksPO>()
-                    .eq(KgLinksPO::getCropName, cropName));
+                    .eq(KgLinksPO::getCropName, cropName).last("LIMIT 50"));
         } else {
             links = new ArrayList<>();
         }

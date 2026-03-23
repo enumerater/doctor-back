@@ -79,4 +79,6 @@ public class UserPO {
     private String deleted;
 
     private Long sessionId;
+
+    private Boolean updatePass;
 }

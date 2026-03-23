@@ -94,8 +94,7 @@ public class UserService {
             userLoginVO.setSessionId(String.valueOf(user.getSessionId()));
 
             UserContextHolder.setUserId(user.getId());
-
-            userLoginVO.setHasPassword( true);
+            userLoginVO.setHasPassword(user.getUpdatePass() == true);
             userLoginVO.setEmail(user.getEmail());
             userLoginVO.setAvatar(user.getAvatar());
             userLoginVO.setRole(user.getRole());
@@ -170,13 +169,11 @@ public class UserService {
                     .status(UserStatusConstant.USER_NORMAL)
                     .deleted(DeleteConstant.UNDELETED)
                     .sessionId(1L) // 初始sessionId
+                    .updatePass(false)
                     .build();
             userMapper.insert(newUser);
             // 获取新创建的用户信息
             user = userMapper.selectOne(new QueryWrapper<UserPO>().eq("email", email));
-        }
-        else{
-            userLoginVO.setHasPassword( true);
         }
 
         // 4. 生成JWT令牌，完成登录（和密码登录逻辑一致）
@@ -215,15 +212,27 @@ public class UserService {
     public String changePassword(UserPasswordDTO userPasswordDTO) {
         log.info("=== change password service ===");
         UserPO user = userMapper.selectOne(new QueryWrapper<UserPO>().eq("id", UserContextHolder.getUserId()));
-        if(Objects.equals(user.getPassword(), userPasswordDTO.getOldPassword())){
+
+        if (user.getUpdatePass() == false) {
             userMapper.updateById(UserPO.builder()
                     .id(user.getId())
                     .password(userPasswordDTO.getNewPassword())
+                    .updatePass(true)
                     .build());
         }
         else{
-            return "旧密码错误";
+            if(Objects.equals(user.getPassword(), userPasswordDTO.getOldPassword())){
+                userMapper.updateById(UserPO.builder()
+                        .id(user.getId())
+                        .password(userPasswordDTO.getNewPassword())
+                        .build());
+            }
+            else{
+                return "旧密码错误";
+            }
         }
+
+
         return "修改成功";
     }
 
