@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.enumerate.disease_detection.MVC.Mapper.UserReminderMapper">
+    <select id="selectAllEnabledTasks" resultType="com.enumerate.disease_detection.MVC.POJO.PO.UserReminderPO">
+        SELECT * FROM user_reminder WHERE status = 1
+    </select>
+</mapper>

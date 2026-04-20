@@ -260,7 +260,6 @@ public class FarmTwinController {
      */
     @GetMapping("/{farmId}/twin/layout")
     public Result<Map<String, Object>> getTwinLayout(@PathVariable String farmId) {
-        // ... (保持你原有的逻辑不变)
         log.info("【AI推算】获取农场数字孪生布局：{}", farmId);
         FarmPO farmPO = farmMapper.selectById(farmId);
         if (farmPO == null) {

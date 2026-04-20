@@ -12,6 +12,8 @@ import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
 import dev.langchain4j.data.message.*;
+import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.openai.OpenAiChatModel;
@@ -28,6 +30,7 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Agent工作流服务 - 基于ReAct模式的单一智能体循环
@@ -40,6 +43,8 @@ import java.util.*;
 @Service
 @Slf4j
 public class AgentWorkflowService {
+    // 最后信息缓存
+    final Map<String, Integer> LAST_CONSOLIDATED_MAP = new ConcurrentHashMap<>();
 
     private static final int MAX_ITERATIONS = 10;
 
@@ -347,6 +352,12 @@ public class AgentWorkflowService {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private Consolidator consolidator;
+
+    @Autowired
+    private ProjectMemoryStore projectMemoryStore;
+
     /**
      * 执行ReAct Agent工作流 (WebSocket版 - 协议v2)
      */
@@ -354,6 +365,8 @@ public class AgentWorkflowService {
     public void executeWs(WebSocketSession session, String text, String imageList, Long userId, String sessionId) {
         com.enumerate.disease_detection.Local.SessionHolder.setSession(session);
         List<Map<String, Object>> trace = new ArrayList<>();
+
+
 
         log.info("textttt  {}", text);
 
@@ -366,14 +379,33 @@ public class AgentWorkflowService {
             fullPrompt = text + "\n[附带图片]: " + imageList;
         }
 
-        // 2. 获取该用户的 ChatMemory (引入 sessionId 以实现会话隔离)
-        String memoryId = "agent_session_" + sessionId; 
-        dev.langchain4j.memory.ChatMemory chatMemory = dev.langchain4j.memory.chat.MessageWindowChatMemory.builder()
-                .maxMessages(20)
+        // ====================== 核心：记忆管理（修正版） ======================
+        String memoryId = "agent_session_" + sessionId;
+        ChatMemory chatMemory = MessageWindowChatMemory.builder()
+                .maxMessages(99999) // 糊弄框架，等价于无限制
                 .chatMemoryStore(persistentChatMemoryStore)
                 .id(memoryId)
                 .build();
 
+        // ✅ 第一步：获取全量消息（必须先拿，否则变量未定义）
+        List<ChatMessage> allMessages = chatMemory.messages();
+
+        // ✅ 第二步：获取增量压缩游标（默认0）
+        int lastConsolidated = LAST_CONSOLIDATED_MAP.getOrDefault(memoryId, 0);
+
+        // ✅ 第三步：调用 Consolidator（1:1对齐Python，只压缩新消息）
+        consolidator.maybeConsolidate(memoryId, userId, allMessages, lastConsolidated);
+
+        // ✅ 第四步：压缩后，重新获取最新的消息列表（关键！）
+        List<ChatMessage> latestMessages = chatMemory.messages();
+
+        // ✅ 第五步：更新游标（永不重复压缩）
+        // 计算已压缩的消息数量 = 原消息数 - 最新消息数
+        int consolidatedCount = allMessages.size() - latestMessages.size();
+        int newLastConsolidated = lastConsolidated + consolidatedCount;
+        LAST_CONSOLIDATED_MAP.put(memoryId, Math.max(newLastConsolidated, 0));
+
+        log.info("游标更新：{} → {}", lastConsolidated, newLastConsolidated);
 
         try {
             chatMemory.add(UserMessage.from(fullPrompt));
@@ -519,3 +551,5 @@ public class AgentWorkflowService {
 
 
 }
+
+
